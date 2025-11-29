@@ -3,7 +3,7 @@
 using reactive_storage_t = entt::reactive_mixin<entt::storage<void>>;
 
 struct base_component_monitor_t {
-    virtual void write_to_history(entt::registry &history_registry, entt::registry &ref_registry) = 0;
+    virtual void write_to_history(entt::registry &history_registry) = 0;
 
     virtual ~base_component_monitor_t() = default;
 };
@@ -19,19 +19,20 @@ public:
         destroyed_storage.template on_destroy<T>(id);
     }
 
-    void write_to_history(entt::registry &history_registry, entt::registry &ref_registry) override {
+    void write_to_history(entt::registry &history_registry) override {
         for (const auto& entt : this->changed_storage) {
             const T &value = this->storage.get(entt);
-            entt::storage<T> &history_storage = history_registry.storage<T>(this->id);
-            auto entity = history_storage.generate();
-            history_storage.template emplace<T>(entity, value);
-            auto &history_ref_storage = ref_registry.storage<std::vector<entt::entity>>(this->id);
-            if (history_ref_storage.contains(entt)) {
-                history_ref_storage.patch(entt, [&entity](std::vector<entt::entity> &references) {
-                    references.push_back(entity);
+            entt::storage<std::vector<size_t>> &history_storage = history_registry.storage<std::vector<size_t>>(this->id);
+            this->history_data.push_back(value);
+            const size_t data_ref = this->history_data.size() - 1;
+            if (history_storage.contains(entt)) {
+                history_storage.patch(entt, [&data_ref](std::vector<size_t> &references) {
+                    references.push_back(data_ref);
                 });
             } else {
-                history_ref_storage.emplace(entt, {entity});
+                std::vector references = {data_ref};
+                std::vector<size_t> &data = history_storage.emplace(entt, references);
+                data.shrink_to_fit();
             }
         }
     }
@@ -41,6 +42,7 @@ private:
     const entt::storage<T> &storage;
     reactive_storage_t changed_storage;
     reactive_storage_t destroyed_storage;
+    std::vector<T> history_data;
 };
 
 class history_t {
@@ -54,7 +56,7 @@ public:
 
     void write_changes() {
         for (const auto& monitor : this->component_monitors) {
-            monitor->write_to_history(this->history_registry, this->history_ref_registry);
+            monitor->write_to_history(this->history_registry);
         }
     }
 
@@ -66,7 +68,6 @@ public:
 private:
     entt::registry &registry;
     entt::registry history_registry;
-    entt::registry history_ref_registry;
     reactive_storage_t entity_create_storage;
     reactive_storage_t entity_destroy_storage;
     std::vector<std::unique_ptr<base_component_monitor_t>> component_monitors;
@@ -75,16 +76,27 @@ private:
 int main() {
     entt::registry registry;
     history_t history{registry};
-    history.monitor_component<char>();
-    //history.monitor_component<uint8_t>();
+    for (int i = 0; i < 10; ++i) {
+        history.monitor_component<char>(i);
+    }
 
     for (int i = 0; i < 1000000; ++i) {
         const auto entity = registry.create();
-        registry.emplace<char>(entity, 2);
-        //registry.emplace<uint8_t>(entity, 2);
+        for (int j = 0; j < 10; ++j) {
+            registry.storage<char>(j).emplace(entity, 1);
+        }
     }
 
     history.write_changes();
+
+    for (int i = 0; i < 100; ++i) {
+        for (int j = 0; j < 10; ++j) {
+            for (const auto& entt : registry.storage<entt::entity>()) {
+                registry.storage<char>(j).patch(entt, [](char &value) { value++; });
+            }
+        }
+        history.write_changes();
+    }
 
     return 0;
 }
