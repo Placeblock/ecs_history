@@ -1,10 +1,42 @@
+#include <chrono>
+#include <iostream>
 #include <entt/entt.hpp>
 
 using reactive_storage_t = entt::reactive_mixin<entt::storage<void>>;
 
-struct base_component_monitor_t {
-    virtual void write_to_history(entt::registry &history_registry) = 0;
+struct change_t {
 
+};
+struct remove_change_t : change_t {
+
+};
+template<typename T>
+struct data_change_t : change_t {
+    T value;
+
+    explicit data_change_t(T value) : value(value) {}
+};
+struct entity_history_t {
+    std::unordered_map<entt::id_type, std::vector<std::unique_ptr<change_t>>> changes{};
+
+    void record_change(const entt::id_type component_id, std::unique_ptr<change_t> change) {
+        this->changes[component_id].push_back(std::move(change));
+    }
+};
+
+struct entities_history_t {
+    std::map<entt::entity, entity_history_t> entity_histories{};
+
+    void record_change(const entt::entity entity, const entt::id_type component_id, std::unique_ptr<change_t> change) {
+        /*if (!this->entity_histories.contains(entity)) {
+            this->entity_histories.emplace(entity, entity_history_t{});
+        }*/
+        this->entity_histories[entity].record_change(component_id, std::move(change));
+    }
+};
+
+struct base_component_monitor_t {
+    virtual void write_to_history(entities_history_t &history) = 0;
     virtual ~base_component_monitor_t() = default;
 };
 
@@ -19,22 +51,18 @@ public:
         destroyed_storage.template on_destroy<T>(id);
     }
 
-    void write_to_history(entt::registry &history_registry) override {
+    void write_to_history(entities_history_t &history) override {
         for (const auto& entt : this->changed_storage) {
             const T &value = this->storage.get(entt);
-            entt::storage<std::vector<size_t>> &history_storage = history_registry.storage<std::vector<size_t>>(this->id);
-            this->history_data.push_back(value);
-            const size_t data_ref = this->history_data.size() - 1;
-            if (history_storage.contains(entt)) {
-                history_storage.patch(entt, [&data_ref](std::vector<size_t> &references) {
-                    references.push_back(data_ref);
-                });
-            } else {
-                std::vector references = {data_ref};
-                std::vector<size_t> &data = history_storage.emplace(entt, references);
-                data.shrink_to_fit();
-            }
+            std::unique_ptr<change_t> change = std::make_unique<data_change_t<T>>(value);
+            history.record_change(entt, this->id, std::move(change));
         }
+        for (const auto& entt : this->destroyed_storage) {
+            auto change = std::make_unique<remove_change_t>();
+            history.record_change(entt, this->id, std::move(change));
+        }
+        this->changed_storage.clear();
+        this->destroyed_storage.clear();
     }
 
 private:
@@ -42,7 +70,6 @@ private:
     const entt::storage<T> &storage;
     reactive_storage_t changed_storage;
     reactive_storage_t destroyed_storage;
-    std::vector<T> history_data;
 };
 
 class history_t {
@@ -56,7 +83,7 @@ public:
 
     void write_changes() {
         for (const auto& monitor : this->component_monitors) {
-            monitor->write_to_history(this->history_registry);
+            monitor->write_to_history(this->history_data);
         }
     }
 
@@ -67,7 +94,7 @@ public:
     }
 private:
     entt::registry &registry;
-    entt::registry history_registry;
+    entities_history_t history_data;;
     reactive_storage_t entity_create_storage;
     reactive_storage_t entity_destroy_storage;
     std::vector<std::unique_ptr<base_component_monitor_t>> component_monitors;
@@ -76,27 +103,30 @@ private:
 int main() {
     entt::registry registry;
     history_t history{registry};
-    for (int i = 0; i < 10; ++i) {
-        history.monitor_component<char>(i);
-    }
+    history.monitor_component<char>();
 
-    for (int i = 0; i < 1000000; ++i) {
-        const auto entity = registry.create();
-        for (int j = 0; j < 10; ++j) {
-            registry.storage<char>(j).emplace(entity, 1);
-        }
-    }
-
-    history.write_changes();
+    auto& storage = registry.storage<char>();
 
     for (int i = 0; i < 100; ++i) {
-        for (int j = 0; j < 10; ++j) {
-            for (const auto& entt : registry.storage<entt::entity>()) {
-                registry.storage<char>(j).patch(entt, [](char &value) { value++; });
-            }
+        const auto& entt = registry.create();
+        storage.emplace(entt, 1);
+    }
+    const std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    for (int i = 0; i < 1000000; ++i) {
+        for (const auto& entt : registry.storage<entt::entity>()) {
+            storage.patch(entt, [](char &value) { value++; });
         }
         history.write_changes();
     }
+    const std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+
+    /*for (int i = 0; i < 10; ++i) {
+        for (const auto& entt : registry.storage<entt::entity>()) {
+            storage.patch(entt, [](char &value) { value++; });
+        }
+        history.write_changes();
+    }*/
 
     return 0;
 }
