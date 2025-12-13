@@ -5,11 +5,9 @@
 #include "change_applier.hpp"
 #include "change_mixin.hpp"
 #include "change_reactive_mixin.hpp"
+using namespace entt::literals;
 
 static_entities_t static_entities;
-
-template<typename T>
-using reactive_storage_t = entt::change_reactive_mixin_t<T, entt::storage<std::shared_ptr<component_change_t<T>>>, entt::basic_registry<>>;
 
 template<typename T>
 using change_storage_t = entt::change_mixin_t<entt::storage<T>, entt::basic_registry<>>;
@@ -95,7 +93,7 @@ public:
     }
 
     void add_change(const std::shared_ptr<component_change_t<T>>& change) {
-        this->changes.emplace_back(change);
+        this->changes.emplace_back(std::move(change));
     }
 
     void apply(entt::registry &reg) const override {
@@ -106,12 +104,6 @@ public:
     }
 };
 
-template<>
-struct entt::storage_type<char> {
-    /*! @brief Type-to-storage conversion result. */
-    using type = change_storage_t<char>;
-};
-
 struct base_component_monitor {
     virtual std::unique_ptr<base_commit_t> commit() = 0;
     virtual ~base_component_monitor() = default;
@@ -119,34 +111,46 @@ struct base_component_monitor {
 
 template<typename T>
 class component_monitor_t final : public base_component_monitor {
+    using construct_reactive_storage_t = entt::change_reactive_mixin_t<entt::storage<entt::construct_component_change_t<T>>, entt::basic_registry<>>;
+    using update_reactive_storage_t = entt::change_reactive_mixin_t<entt::storage<entt::update_component_change_t<T>>, entt::basic_registry<>>;
+    using destruct_reactive_storage_t = entt::change_reactive_mixin_t<entt::storage<entt::destruct_component_change_t<T>>, entt::basic_registry<>>;
+
 public:
     explicit component_monitor_t(entt::registry &registry, const entt::id_type id = entt::type_hash<T>::value())
-        : id(id), storage(registry.storage<T>(id)), changed_storage(static_entities, id) {
-        changed_storage.bind(registry);
-        changed_storage.on_construct().on_update().on_destroy();
+        : id(id), storage(registry.storage<T>(id)),
+            constructed_storage(static_entities, id),
+            updated_storage(static_entities, id),
+            destructed_storage(static_entities, id) {
+        constructed_storage.bind(registry);
+        constructed_storage.on_construct();
+        updated_storage.bind(registry);
+        updated_storage.on_update();
+        destructed_storage.bind(registry);
+        destructed_storage.on_destroy();
     }
 
     std::unique_ptr<base_commit_t> commit() override {
         std::unique_ptr<component_commit_t<T>> commit = std::make_unique<component_commit_t<T>>(this->id);
-        for (const auto& change : changed_storage) {
-            commit->add_change(change);
-        }
-        changed_storage.clear();
+
         return std::move(commit);
     }
 
 private:
     const entt::id_type id;
     const entt::storage<T> &storage;
-    reactive_storage_t<T> changed_storage;
+    construct_reactive_storage_t constructed_storage;
+    update_reactive_storage_t updated_storage;
+    destruct_reactive_storage_t destructed_storage;
 };
 
 class entity_monitor_t final {
-    using reactive_storage = entt::reactive_mixin<entt::storage<entt::entity>>;
+    using reactive_storage = entt::storage_type_t<entt::reactive, entt::entity>;
 public:
-    explicit entity_monitor_t(entt::registry &reg) {
-        created_storage.bind(reg);
-        destroyed_storage.bind(reg);
+    explicit entity_monitor_t(entt::registry &reg)
+        : created_storage(reg.storage<entt::reactive>("entity_created_storage"_hs)),
+          destroyed_storage(reg.storage<entt::reactive>("entity_destroyed_storage"_hs)){
+        created_storage.on_construct<entt::entity>();
+        destroyed_storage.on_destroy<entt::entity>();
     }
 
     std::unique_ptr<base_commit_t> commit_created() {
@@ -168,8 +172,8 @@ public:
         return std::move(commit);
     }
 
-    reactive_storage created_storage;
-    reactive_storage destroyed_storage;
+    reactive_storage& created_storage;
+    reactive_storage& destroyed_storage;
 };
 
 class history_t {
@@ -187,6 +191,7 @@ public:
             new_commits.push_back(monitor->commit());
         }
         new_commits.push_back(entity_monitor.commit_destroyed());
+        this->commits.push_back(std::move(new_commits));
     }
 
     template<typename T>
@@ -200,24 +205,10 @@ private:
     entity_monitor_t entity_monitor;
 };
 
-class history_controller_t {
-    void remove_commit() {
-        this->history.commits.erase(this->history.commits.begin());
-        this->removed_commits++;
-    }
-public:
-    explicit history_controller_t(history_t &history)
-        : history(history) {
-    }
-
-    [[nodiscard]] size_t commit() const {
-        history.commit();
-        return history.commits.size() + removed_commits;
-    }
-
-private:
-    history_t &history;
-    size_t removed_commits = 0;
+template<>
+struct entt::storage_type<char> {
+    /*! @brief Type-to-storage conversion result. */
+    using type = change_storage_t<char>;
 };
 
 int main() {
@@ -227,31 +218,15 @@ int main() {
 
     auto& storage = registry.storage<char>();
 
-    const std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     for (int i = 0; i < 1000000; ++i) {
         const auto& entt = registry.create();
         storage.emplace(entt, 1);
     }
-    history.commit();
-    const std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
-    /*const std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    for (int i = 0; i < 1000000; ++i) {
-        for (const auto& entt : registry.storage<entt::entity>()) {
-            storage.patch(entt, [](char &value) { value++; });
-        }
-        history.write_changes();
-    }
-    const std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;*/
+    history.commit();
 
-    /*
-    for (int i = 0; i < 10; ++i) {
-        for (const auto& entt : registry.storage<entt::entity>()) {
-            storage.patch(entt, [](char &value) { value++; });
-        }
-        history.commit();
-    }*/
 
     return 0;
 }

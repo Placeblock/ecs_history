@@ -6,15 +6,43 @@
 #define ECS_HISTORY_CHANGE_REACTIVE_MIXIN_H
 #include <memory>
 #include <entt/entity/registry.hpp>
-#include "static_entity.hpp"
+
 
 namespace entt {
+    struct component_change_t {};
+
+    template<typename T>
+    struct construct_component_change_t : component_change_t {
+        using component_type = T;
+
+        T value;
+
+        explicit construct_component_change_t(const T value) : value(value) {}
+    };
+    template<typename T>
+    struct update_component_change_t : component_change_t {
+        using component_type = T;
+
+        T old_value;
+        T new_value;
+
+        explicit update_component_change_t(const T old_value, const T new_value) : old_value(old_value), new_value(new_value) {}
+    };
+    template<typename T>
+    struct destruct_component_change_t : component_change_t {
+        using component_type = T;
+
+        T old_value;
+
+        explicit destruct_component_change_t(const T old_value) : old_value(old_value) {}
+    };
+
     /**
  * @brief Mixin type used to add _reactive_ support to storage types.
  * @tparam Type Underlying storage type.
  * @tparam Registry Basic registry type.
  */
-template<typename Clazz, typename Type, typename Registry>
+template<typename Type, typename Registry>
 class change_reactive_mixin_t final: public Type {
     using underlying_type = Type;
     using owner_type = Registry;
@@ -23,30 +51,29 @@ class change_reactive_mixin_t final: public Type {
     using basic_registry_type = basic_registry<typename owner_type::entity_type, typename owner_type::allocator_type>;
     using container_type = std::vector<connection, typename alloc_traits::template rebind_alloc<connection>>;
 
+    using change_type = Type::value_type;
+    using value_type = Type::value_type::component_type;
+
     static_assert(std::is_base_of_v<basic_registry_type, owner_type>, "Invalid registry type");
+    static_assert(std::is_base_of_v<component_change_t, change_type>, "Invalid change type");
 
     [[nodiscard]] auto &owner_or_assert() const noexcept {
         ENTT_ASSERT(owner != nullptr, "Invalid pointer to registry");
         return static_cast<owner_type &>(*owner);
     }
 
-    void emplace_construction(const Registry &, underlying_type::entity_type entity, Clazz value) {
-        uint64_t static_entt = this->static_entities.get_static_entity(entity);
-        if(!underlying_type::contains(entity)) {
-            underlying_type::emplace(entity, std::make_shared<construct_change_t<Clazz>>(static_entt, value));
-        }
+
+    void emplace_creation(const Registry &, underlying_type::entity_type entity, const value_type& value)
+            requires std::same_as<change_type, construct_component_change_t<value_type>> {
+        underlying_type::emplace(entity, construct_component_change_t<value_type>{value});
     }
-    void emplace_destruction(const Registry &, underlying_type::entity_type entity, Clazz old_value) {
-        uint64_t static_entt = this->static_entities.get_static_entity(entity);
-        if(!underlying_type::contains(entity)) {
-            underlying_type::emplace(entity, std::make_shared<destruct_change_t<Clazz>>(static_entt, old_value));
-        }
+    void emplace_update(const Registry &, underlying_type::entity_type entity, const value_type& old_value, const value_type& new_value)
+            requires std::same_as<change_type, update_component_change_t<value_type>> {
+        underlying_type::emplace(entity, update_component_change_t<value_type>{old_value, new_value});
     }
-    void emplace_update(const Registry &, underlying_type::entity_type entity, Clazz old_value, Clazz new_value) {
-        uint64_t static_entt = this->static_entities.get_static_entity(entity);
-        if(!underlying_type::contains(entity)) {
-            underlying_type::emplace(entity, std::make_shared<update_change_t<Clazz>>(static_entt, old_value, new_value));
-        }
+    void emplace_destruction(const Registry &, underlying_type::entity_type entity, const value_type& old_value)
+            requires std::same_as<change_type, destruct_component_change_t<value_type>> {
+        underlying_type::emplace(entity, destruct_component_change_t<value_type>{old_value});
     }
 
     void bind_any(any value) noexcept {
@@ -142,21 +169,20 @@ public:
      * @tparam Candidate Function to use to _react_ to the event.
      * @return This mixin.
      */
-    template<auto Candidate = &change_reactive_mixin_t::emplace_construction>
-    change_reactive_mixin_t &on_construct() {
-        auto curr = owner_or_assert().template storage<Clazz>(id).on_construct().template connect<Candidate>(*this);
+    change_reactive_mixin_t &on_construct()
+            requires std::same_as<change_type, construct_component_change_t<value_type>>{
+        auto curr = owner_or_assert().template storage<value_type>(id).on_construct().template connect<&change_reactive_mixin_t::emplace_creation>(*this);
         conn.push_back(std::move(curr));
         return *this;
     }
 
     /**
      * @brief Makes storage _react_ to update of objects of the given type.
-     * @tparam Candidate Function to use to _react_ to the event.
      * @return This mixin.
      */
-    template<auto Candidate = &change_reactive_mixin_t::emplace_update>
-    change_reactive_mixin_t &on_update() {
-        auto curr = owner_or_assert().template storage<Clazz>(id).on_update().template connect<Candidate>(*this);
+    change_reactive_mixin_t &on_update()
+            requires std::same_as<change_type, update_component_change_t<value_type>> {
+        auto curr = owner_or_assert().template storage<value_type>(id).on_update().template connect<&change_reactive_mixin_t::emplace_update>(*this);
         conn.push_back(std::move(curr));
         return *this;
     }
@@ -166,9 +192,9 @@ public:
      * @tparam Candidate Function to use to _react_ to the event.
      * @return This mixin.
      */
-    template<auto Candidate = &change_reactive_mixin_t::emplace_destruction>
-    change_reactive_mixin_t &on_destroy() {
-        auto curr = owner_or_assert().template storage<Clazz>(id).on_destroy().template connect<Candidate>(*this);
+    change_reactive_mixin_t &on_destroy()
+            requires std::same_as<change_type, destruct_component_change_t<value_type>> {
+        auto curr = owner_or_assert().template storage<value_type>(id).on_destroy().template connect<&change_reactive_mixin_t::emplace_destruction>(*this);
         conn.push_back(std::move(curr));
         return *this;
     }
@@ -232,6 +258,7 @@ private:
     id_type id;
     static_entities_t& static_entities;
 };
+
 }
 
 #endif //ECS_HISTORY_CHANGE_REACTIVE_MIXIN_H
