@@ -14,5 +14,10 @@ FetchContent_MakeAvailable(entt)
 
 add_executable(ecs_history main.cpp
         change_mixin.hpp
-        change_reactive_mixin.hpp)
+        change_reactive_mixin.hpp
+        change.cpp
+        change.hpp
+        change_applier.cpp
+        change_applier.hpp
+        static_entity.hpp)
 target_link_libraries(ecs_history EnTT::EnTT)

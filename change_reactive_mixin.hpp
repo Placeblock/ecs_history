@@ -6,29 +6,7 @@
 #define ECS_HISTORY_CHANGE_REACTIVE_MIXIN_H
 #include <memory>
 #include <entt/entity/registry.hpp>
-
-struct change_t {
-
-};
-template<typename T>
-struct destruct_change_t : change_t {
-    T old_value;
-
-    explicit destruct_change_t(T old_value) : old_value(old_value) {}
-};
-template<typename T>
-struct construct_change_t : change_t {
-    T value;
-
-    explicit construct_change_t(T value) : value(value) {}
-};
-template<typename T>
-struct update_change_t : change_t {
-    T old_value;
-    T new_value;
-
-    explicit update_change_t(T old_value, T new_value) : old_value(old_value), new_value(new_value) {}
-};
+#include "static_entity.hpp"
 
 namespace entt {
     /**
@@ -52,23 +30,25 @@ class change_reactive_mixin_t final: public Type {
         return static_cast<owner_type &>(*owner);
     }
 
-    void emplace_construction(const Registry &, typename underlying_type::entity_type entity, Clazz value) {
+    void emplace_construction(const Registry &, underlying_type::entity_type entity, Clazz value) {
+        uint64_t static_entt = this->static_entities.get_static_entity(entity);
         if(!underlying_type::contains(entity)) {
-            underlying_type::emplace(entity, std::make_shared<construct_change_t<Clazz>>(value));
+            underlying_type::emplace(entity, std::make_shared<construct_change_t<Clazz>>(static_entt, value));
         }
     }
-    void emplace_destruction(const Registry &, typename underlying_type::entity_type entity, Clazz old_value) {
+    void emplace_destruction(const Registry &, underlying_type::entity_type entity, Clazz old_value) {
+        uint64_t static_entt = this->static_entities.get_static_entity(entity);
         if(!underlying_type::contains(entity)) {
-            underlying_type::emplace(entity, std::make_shared<destruct_change_t<Clazz>>(old_value));
+            underlying_type::emplace(entity, std::make_shared<destruct_change_t<Clazz>>(static_entt, old_value));
         }
     }
-    void emplace_update(const Registry &, typename underlying_type::entity_type entity, Clazz old_value, Clazz new_value) {
+    void emplace_update(const Registry &, underlying_type::entity_type entity, Clazz old_value, Clazz new_value) {
+        uint64_t static_entt = this->static_entities.get_static_entity(entity);
         if(!underlying_type::contains(entity)) {
-            underlying_type::emplace(entity, std::make_shared<update_change_t<Clazz>>(old_value, new_value));
+            underlying_type::emplace(entity, std::make_shared<update_change_t<Clazz>>(static_entt, old_value, new_value));
         }
     }
 
-private:
     void bind_any(any value) noexcept {
         owner = any_cast<basic_registry_type>(&value);
 
@@ -83,26 +63,27 @@ private:
 
 public:
     /*! @brief Allocator type. */
-    using allocator_type = typename underlying_type::allocator_type;
+    using allocator_type = underlying_type::allocator_type;
     /*! @brief Underlying entity identifier. */
-    using entity_type = typename underlying_type::entity_type;
+    using entity_type = underlying_type::entity_type;
     /*! @brief Expected registry type. */
     using registry_type = owner_type;
 
     /*! @brief Default constructor. */
-    explicit change_reactive_mixin_t(const id_type id = type_hash<Type>::value())
-        : change_reactive_mixin_t{allocator_type{}, id} {}
+    explicit change_reactive_mixin_t(static_entities_t& static_entities, const id_type id = type_hash<Type>::value())
+        : change_reactive_mixin_t{static_entities, allocator_type{}, id} {}
 
     /**
      * @brief Constructs an empty storage with a given allocator.
      * @param allocator The allocator to use.
      * @param id Optional name used to map the storage within the registry.
      */
-    explicit change_reactive_mixin_t(const allocator_type &allocator, const id_type id = type_hash<Type>::value())
+    explicit change_reactive_mixin_t(static_entities_t& static_entities, const allocator_type &allocator, const id_type id = type_hash<Type>::value())
         : underlying_type{allocator},
           owner{},
           conn{allocator},
-          id(id) {
+          id(id),
+          static_entities(static_entities) {
     }
 
     /*! @brief Default copy constructor, deleted on purpose. */
@@ -116,8 +97,9 @@ public:
     change_reactive_mixin_t(change_reactive_mixin_t &&other) noexcept
         : underlying_type{std::move(other)},
           owner{other.owner},
+          conn{},
           id{other.id},
-          conn{} {
+          static_entities(other.static_entities) {
     }
     // NOLINTEND(bugprone-use-after-move)
 
@@ -130,8 +112,9 @@ public:
     change_reactive_mixin_t(change_reactive_mixin_t &&other, const allocator_type &allocator)
         : underlying_type{std::move(other), allocator},
           owner{other.owner},
+          conn{allocator},
           id{other.id},
-          conn{allocator} {
+          static_entities(other.static_entities) {
     }
     // NOLINTEND(bugprone-use-after-move)
 
@@ -247,6 +230,7 @@ private:
     basic_registry_type *owner;
     container_type conn;
     id_type id;
+    static_entities_t& static_entities;
 };
 }
 
