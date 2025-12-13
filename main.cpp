@@ -1,4 +1,5 @@
 #include <chrono>
+#include <iostream>
 #include <entt/entt.hpp>
 
 #include "change_applier.hpp"
@@ -52,7 +53,7 @@ public:
     }
 
     void apply(entt::registry &reg) const override {
-        entity_change_applier_t applier{reg};
+        entity_change_applier_t applier{static_entities, reg};
         for (const auto& change : this->changes) {
             change->apply(applier);
         }
@@ -98,7 +99,7 @@ public:
     }
 
     void apply(entt::registry &reg) const override {
-        component_change_applier_t<T> applier{reg};
+        component_change_applier_t<T> applier{static_entities, reg};
         for (const auto& change : this->changes) {
             change->apply(applier);
         }
@@ -111,13 +112,13 @@ struct entt::storage_type<char> {
     using type = change_storage_t<char>;
 };
 
-struct base_component_monitor_t {
-    virtual std::unique_ptr<base_component_commit_t> commit() = 0;
-    virtual ~base_component_monitor_t() = default;
+struct base_component_monitor {
+    virtual std::unique_ptr<base_commit_t> commit() = 0;
+    virtual ~base_component_monitor() = default;
 };
 
 template<typename T>
-class component_monitor_t final : public base_component_monitor_t {
+class component_monitor_t final : public base_component_monitor {
 public:
     explicit component_monitor_t(entt::registry &registry, const entt::id_type id = entt::type_hash<T>::value())
         : id(id), storage(registry.storage<T>(id)), changed_storage(static_entities, id) {
@@ -125,11 +126,12 @@ public:
         changed_storage.on_construct().on_update().on_destroy();
     }
 
-    std::unique_ptr<base_component_commit_t> commit() override {
+    std::unique_ptr<base_commit_t> commit() override {
         std::unique_ptr<component_commit_t<T>> commit = std::make_unique<component_commit_t<T>>(this->id);
         for (const auto& change : changed_storage) {
             commit->add_change(change);
         }
+        changed_storage.clear();
         return std::move(commit);
     }
 
@@ -139,28 +141,63 @@ private:
     reactive_storage_t<T> changed_storage;
 };
 
+class entity_monitor_t final {
+    using reactive_storage = entt::reactive_mixin<entt::storage<entt::entity>>;
+public:
+    explicit entity_monitor_t(entt::registry &reg) {
+        created_storage.bind(reg);
+        destroyed_storage.bind(reg);
+    }
+
+    std::unique_ptr<base_commit_t> commit_created() {
+        auto commit = std::make_unique<entity_commit_t>();
+        for (const auto& entt : created_storage) {
+            static_entity_t static_entity = static_entities.get_static_entity(entt);
+            commit->add_change(std::make_unique<entity_create_change_t>(static_entity));
+        }
+        created_storage.clear();
+        return std::move(commit);
+    }
+    std::unique_ptr<base_commit_t> commit_destroyed() {
+        auto commit = std::make_unique<entity_commit_t>();
+        for (const auto& entt : destroyed_storage) {
+            static_entity_t static_entity = static_entities.get_static_entity(entt);
+            commit->add_change(std::make_unique<entity_destroy_change_t>(static_entity));
+        }
+        destroyed_storage.clear();
+        return std::move(commit);
+    }
+
+    reactive_storage created_storage;
+    reactive_storage destroyed_storage;
+};
+
 class history_t {
 public:
-    std::vector<std::vector<std::unique_ptr<base_component_commit_t>>> commits;
+    std::vector<std::vector<std::unique_ptr<base_commit_t>>> commits;
 
-    explicit history_t(entt::registry &registry) : registry(registry) {
+    explicit history_t(entt::registry &registry)
+        : registry(registry), entity_monitor(registry) {
     }
 
     void commit() {
-        std::vector<std::unique_ptr<base_component_commit_t>>& change = commits.emplace_back();
+        std::vector<std::unique_ptr<base_commit_t>>& new_commits = commits.emplace_back();
+        new_commits.push_back(entity_monitor.commit_created());
         for (const auto& monitor : this->component_monitors) {
-            change.push_back(monitor->commit());
+            new_commits.push_back(monitor->commit());
         }
+        new_commits.push_back(entity_monitor.commit_destroyed());
     }
 
     template<typename T>
     void monitor_component(const entt::id_type id = entt::type_hash<T>::value()) {
-        std::unique_ptr<base_component_monitor_t> monitor = std::make_unique<component_monitor_t<T>>(registry, id);
+        std::unique_ptr<base_component_monitor> monitor = std::make_unique<component_monitor_t<T>>(registry, id);
         this->component_monitors.push_back(std::move(monitor));
     }
 private:
     entt::registry &registry;
-    std::vector<std::unique_ptr<base_component_monitor_t>> component_monitors;
+    std::vector<std::unique_ptr<base_component_monitor>> component_monitors;
+    entity_monitor_t entity_monitor;
 };
 
 class history_controller_t {
@@ -190,11 +227,14 @@ int main() {
 
     auto& storage = registry.storage<char>();
 
+    const std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     for (int i = 0; i < 1000000; ++i) {
         const auto& entt = registry.create();
         storage.emplace(entt, 1);
     }
     history.commit();
+    const std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
     /*const std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     for (int i = 0; i < 1000000; ++i) {
         for (const auto& entt : registry.storage<entt::entity>()) {

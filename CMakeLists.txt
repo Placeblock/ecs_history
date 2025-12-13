@@ -19,5 +19,6 @@ add_executable(ecs_history main.cpp
         change.hpp
         change_applier.cpp
         change_applier.hpp
-        static_entity.hpp)
+        static_entity.hpp
+)
 target_link_libraries(ecs_history EnTT::EnTT)
