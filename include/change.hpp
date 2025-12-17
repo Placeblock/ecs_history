@@ -5,6 +5,8 @@
 #ifndef ECS_HISTORY_CHANGE_H
 #define ECS_HISTORY_CHANGE_H
 #include <entt/entity/entity.hpp>
+#include <entt/meta/meta.hpp>
+
 #include "static_entity.hpp"
 
 template<typename T>
@@ -16,28 +18,35 @@ struct entity_destroy_change_t;
 struct entity_change_t {
     const static_entity_t entt;
 
-    explicit entity_change_t(const static_entity_t entt) : entt(entt) {}
+    explicit entity_change_t(const static_entity_t entt) : entt(entt) {
+    }
 
     [[nodiscard]] virtual std::unique_ptr<entity_change_t> invert() const = 0;
+
     [[nodiscard]] size_t size() const {
         return sizeof(static_entity_t);
     }
+
     virtual void apply(entity_change_supplier_t &applier) const = 0;
 
     virtual ~entity_change_t() = default;
 };
 
 struct entity_create_change_t final : entity_change_t {
-    explicit entity_create_change_t(const static_entity_t entt) : entity_change_t(entt) {}
+    explicit entity_create_change_t(const static_entity_t entt) : entity_change_t(entt) {
+    }
 
     [[nodiscard]] std::unique_ptr<entity_change_t> invert() const override;
+
     void apply(entity_change_supplier_t &applier) const override;
 };
 
 struct entity_destroy_change_t final : entity_change_t {
-    explicit entity_destroy_change_t(const static_entity_t entt) : entity_change_t(entt) {}
+    explicit entity_destroy_change_t(const static_entity_t entt) : entity_change_t(entt) {
+    }
 
     [[nodiscard]] std::unique_ptr<entity_change_t> invert() const override;
+
     void apply(entity_change_supplier_t &applier) const override;
 };
 
@@ -45,13 +54,15 @@ template<typename T>
 struct component_change_t {
     const static_entity_t entt;
 
-    explicit component_change_t(const static_entity_t entt) : entt(entt) {}
+    explicit component_change_t(const static_entity_t entt) : entt(entt) {
+    }
 
     [[nodiscard]] virtual size_t size() const {
         return sizeof(static_entity_t);
     }
 
     [[nodiscard]] virtual std::unique_ptr<component_change_t> invert() const = 0;
+
     virtual void apply(component_change_supplier_t<T> &applier) const = 0;
 
     virtual ~component_change_t() = default;
@@ -72,8 +83,8 @@ struct construct_change_t final : component_change_t<T> {
         return sizeof(T) + component_change_t<T>::size();
     }
 
-    [[nodiscard]] std::unique_ptr<component_change_t<T>> invert() const override {
-        return std::make_unique<destruct_change_t<T>>(this->entt, value);
+    [[nodiscard]] std::unique_ptr<component_change_t<T> > invert() const override {
+        return std::make_unique<destruct_change_t<T> >(this->entt, value);
     }
 
     void apply(component_change_supplier_t<T> &applier) const override {
@@ -82,7 +93,7 @@ struct construct_change_t final : component_change_t<T> {
 };
 
 template<typename T>
-struct update_change_t final  : component_change_t<T> {
+struct update_change_t final : component_change_t<T> {
     const T old_value;
     const T new_value;
 
@@ -94,7 +105,7 @@ struct update_change_t final  : component_change_t<T> {
         return 2 * sizeof(T) + component_change_t<T>::size();
     }
 
-    [[nodiscard]] std::unique_ptr<component_change_t<T>> invert() const override {
+    [[nodiscard]] std::unique_ptr<component_change_t<T> > invert() const override {
         return std::make_unique<update_change_t>(this->entt, new_value, old_value);
     }
 
@@ -104,7 +115,7 @@ struct update_change_t final  : component_change_t<T> {
 };
 
 template<typename T>
-struct destruct_change_t final  : component_change_t<T> {
+struct destruct_change_t final : component_change_t<T> {
     const T old_value;
 
     explicit destruct_change_t(const static_entity_t entt, T old_value)
@@ -115,8 +126,8 @@ struct destruct_change_t final  : component_change_t<T> {
         return sizeof(T) + component_change_t<T>::size();
     }
 
-    [[nodiscard]] std::unique_ptr<component_change_t<T>> invert() const override {
-        return std::make_unique<construct_change_t<T>>(this->entt, old_value);
+    [[nodiscard]] std::unique_ptr<component_change_t<T> > invert() const override {
+        return std::make_unique<construct_change_t<T> >(this->entt, old_value);
     }
 
     void apply(component_change_supplier_t<T> &applier) const override {
@@ -127,11 +138,24 @@ struct destruct_change_t final  : component_change_t<T> {
 template<typename T>
 class component_change_supplier_t {
 public:
-    virtual ~component_change_supplier_t() = default;
+    virtual void apply(const construct_change_t<T> &c) = 0;
 
-    virtual void apply(const construct_change_t<T>& c) = 0;
-    virtual void apply(const update_change_t<T>& c) = 0;
-    virtual void apply(const destruct_change_t<T>& c) = 0;
+    virtual void apply(const update_change_t<T> &c) = 0;
+
+    virtual void apply(const destruct_change_t<T> &c) = 0;
+
+    virtual ~component_change_supplier_t() = default;
+};
+
+class any_component_change_supplier_t {
+public:
+    virtual void apply_construct(entt::meta_any &value) = 0;
+
+    virtual void apply_update(entt::meta_any &old_value, entt::meta_any &new_value) = 0;
+
+    virtual void apply_destruct(entt::meta_any &old_value) = 0;
+
+    virtual ~any_component_change_supplier_t() = default;
 };
 
 #endif //ECS_HISTORY_CHANGE_H

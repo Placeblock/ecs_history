@@ -19,11 +19,13 @@ add_library(ecs-history
         include/change_reactive_mixin.hpp
         include/commit.hpp
         include/static_entity.hpp
-        include/monitor.hpp)
+        include/monitor.hpp
+        include/registry.hpp)
 target_include_directories(ecs-history PUBLIC include)
 target_sources(ecs-history PUBLIC
         src/change.cpp
         src/change_applier.cpp
         src/commit.cpp
         src/static_entity.cpp)
+target_link_libraries(ecs-history EnTT::EnTT)
 

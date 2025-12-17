@@ -12,9 +12,6 @@ using namespace entt::literals;
 
 static_entities_t static_entities;
 
-template<typename T>
-using change_storage_t = entt::change_mixin_t<entt::storage<T>, entt::basic_registry<> >;
-
 class base_commit_t {
 public:
     [[nodiscard]] virtual size_t size() const = 0;

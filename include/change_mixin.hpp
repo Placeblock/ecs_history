@@ -14,10 +14,18 @@ namespace entt {
         using underlying_type = Type;
         using owner_type = Registry;
 
-        using basic_registry_type = basic_registry<typename owner_type::entity_type, typename owner_type::allocator_type>;
-        using construction_type = sigh<void(owner_type &, const typename underlying_type::entity_type, const typename underlying_type::value_type &value), typename underlying_type::allocator_type>;
-        using update_type = sigh<void(owner_type &, const typename underlying_type::entity_type, const typename underlying_type::value_type &old_value, const typename underlying_type::value_type &new_value), typename underlying_type::allocator_type>;
-        using destruction_type = sigh<void(owner_type &, const typename underlying_type::entity_type, const typename underlying_type::value_type &old_value), typename underlying_type::allocator_type>;
+        using basic_registry_type = basic_registry<typename owner_type::entity_type, typename
+            owner_type::allocator_type>;
+        using construction_type = sigh<void(owner_type &, const typename underlying_type::entity_type,
+                                            const typename underlying_type::value_type &value), typename
+            underlying_type::allocator_type>;
+        using update_type = sigh<void(owner_type &, const typename underlying_type::entity_type,
+                                      const typename underlying_type::value_type &old_value,
+                                      const typename underlying_type::value_type &new_value), typename
+            underlying_type::allocator_type>;
+        using destruction_type = sigh<void(owner_type &, const typename underlying_type::entity_type,
+                                           const typename underlying_type::value_type &old_value), typename
+            underlying_type::allocator_type>;
         using underlying_iterator = typename underlying_type::base_type::basic_iterator;
 
         static_assert(std::is_base_of_v<basic_registry_type, owner_type>, "Invalid registry type");
@@ -29,10 +37,10 @@ namespace entt {
 
     private:
         void pop(underlying_iterator first, underlying_iterator last) final {
-            if(auto &reg = owner_or_assert(); destruction.empty()) {
+            if (auto &reg = owner_or_assert(); destruction.empty()) {
                 underlying_type::pop(first, last);
             } else {
-                for(; first != last; ++first) {
+                for (; first != last; ++first) {
                     const auto entt = *first;
                     const auto &old_value = underlying_type::get(entt);
                     destruction.publish(reg, entt, old_value);
@@ -43,18 +51,19 @@ namespace entt {
         }
 
         void pop_all() final {
-            if(auto &reg = owner_or_assert(); !destruction.empty()) {
-                if constexpr(std::is_same_v<typename underlying_type::element_type, entity_type>) {
-                    for(typename underlying_type::size_type pos{}, last = underlying_type::free_list(); pos < last; ++pos) {
+            if (auto &reg = owner_or_assert(); !destruction.empty()) {
+                if constexpr (std::is_same_v<typename underlying_type::element_type, entity_type>) {
+                    for (typename underlying_type::size_type pos{}, last = underlying_type::free_list(); pos < last; ++
+                         pos) {
                         const auto &entt = underlying_type::base_type::operator[](pos);
                         const auto &old_value = this->get(entt);
                         destruction.publish(reg, entt, old_value);
                     }
                 } else {
-                    for(auto entt: static_cast<typename underlying_type::base_type &>(*this)) {
+                    for (auto entt: static_cast<typename underlying_type::base_type &>(*this)) {
                         const auto &old_value = this->get(entt);
-                        if constexpr(underlying_type::storage_policy == deletion_policy::in_place) {
-                            if(entt != tombstone) {
+                        if constexpr (underlying_type::storage_policy == deletion_policy::in_place) {
+                            if (entt != tombstone) {
                                 destruction.publish(reg, entt, old_value);
                             }
                         } else {
@@ -67,10 +76,11 @@ namespace entt {
             underlying_type::pop_all();
         }
 
-        underlying_iterator try_emplace(const typename underlying_type::entity_type entt, const bool force_back, const void *value) final {
+        underlying_iterator try_emplace(const typename underlying_type::entity_type entt, const bool force_back,
+                                        const void *value) final {
             const auto it = underlying_type::try_emplace(entt, force_back, value);
 
-            if(auto &reg = owner_or_assert(); it != underlying_type::base_type::end()) {
+            if (auto &reg = owner_or_assert(); it != underlying_type::base_type::end()) {
                 const auto &comp_value = this->get(entt);
                 construction.publish(reg, *it, comp_value);
             }
@@ -81,8 +91,8 @@ namespace entt {
         void bind_any(any value) noexcept {
             owner = any_cast<basic_registry_type>(&value);
 
-            if constexpr(!std::is_same_v<registry_type, basic_registry_type>) {
-                if(owner == nullptr) {
+            if constexpr (!std::is_same_v<registry_type, basic_registry_type>) {
+                if (owner == nullptr) {
                     owner = any_cast<registry_type>(&value);
                 }
             }
@@ -100,7 +110,8 @@ namespace entt {
 
         /*! @brief Default constructor. */
         change_mixin_t()
-            : change_mixin_t{allocator_type{}} {}
+            : change_mixin_t{allocator_type{}} {
+        }
 
         /**
          * @brief Constructs an empty storage with a given allocator.
@@ -112,15 +123,15 @@ namespace entt {
               construction{allocator},
               destruction{allocator},
               update{allocator} {
-            if constexpr(internal::has_on_construct<typename underlying_type::element_type, Registry>::value) {
+            if constexpr (internal::has_on_construct<typename underlying_type::element_type, Registry>::value) {
                 entt::sink{construction}.template connect<&underlying_type::element_type::on_construct>();
             }
 
-            if constexpr(internal::has_on_update<typename underlying_type::element_type, Registry>::value) {
+            if constexpr (internal::has_on_update<typename underlying_type::element_type, Registry>::value) {
                 entt::sink{update}.template connect<&underlying_type::element_type::on_update>();
             }
 
-            if constexpr(internal::has_on_destroy<typename underlying_type::element_type, Registry>::value) {
+            if constexpr (internal::has_on_destroy<typename underlying_type::element_type, Registry>::value) {
                 entt::sink{destruction}.template connect<&underlying_type::element_type::on_destroy>();
             }
         }
@@ -138,7 +149,9 @@ namespace entt {
               owner{other.owner},
               construction{std::move(other.construction)},
               destruction{std::move(other.destruction)},
-              update{std::move(other.update)} {}
+              update{std::move(other.update)} {
+        }
+
         // NOLINTEND(bugprone-use-after-move)
 
         /**
@@ -152,7 +165,9 @@ namespace entt {
               owner{other.owner},
               construction{std::move(other.construction), allocator},
               destruction{std::move(other.destruction), allocator},
-              update{std::move(other.update), allocator} {}
+              update{std::move(other.update), allocator} {
+        }
+
         // NOLINTEND(bugprone-use-after-move)
 
         /*! @brief Default destructor. */
@@ -285,8 +300,8 @@ namespace entt {
         void generate(It first, It last) {
             underlying_type::generate(first, last);
 
-            if(auto &reg = owner_or_assert(); !construction.empty()) {
-                for(; first != last; ++first) {
+            if (auto &reg = owner_or_assert(); !construction.empty()) {
+                for (; first != last; ++first) {
                     const auto &value = this->get(*first);
                     construction.publish(reg, *first, value);
                 }
@@ -301,8 +316,8 @@ namespace entt {
          * @return A reference to the newly created object.
          */
         template<typename... Args>
-        decltype(auto) emplace(const entity_type entt, Args &&...args) {
-            const auto& value = underlying_type::emplace(entt, std::forward<Args>(args)...);
+        decltype(auto) emplace(const entity_type entt, Args &&... args) {
+            const auto &value = underlying_type::emplace(entt, std::forward<Args>(args)...);
             construction.publish(owner_or_assert(), entt, value);
             return value;
         }
@@ -315,10 +330,10 @@ namespace entt {
          * @return A reference to the patched instance.
          */
         template<typename... Func>
-        decltype(auto) patch(const entity_type entt, Func &&...func) {
-            const auto& old_value = this->get(entt);
+        decltype(auto) patch(const entity_type entt, Func &&... func) {
+            const auto &old_value = this->get(entt);
             underlying_type::patch(entt, std::forward<Func>(func)...);
-            const auto& new_value = this->get(entt);
+            const auto &new_value = this->get(entt);
             update.publish(owner_or_assert(), entt, old_value, new_value);
             return new_value;
         }
@@ -333,13 +348,13 @@ namespace entt {
          * @param args Parameters to use to forward to the underlying storage.
          */
         template<typename It, typename... Args>
-        void insert(It first, It last, Args &&...args) {
+        void insert(It first, It last, Args &&... args) {
             auto from = underlying_type::size();
             underlying_type::insert(first, last, std::forward<Args>(args)...);
 
-            if(auto &reg = owner_or_assert(); !construction.empty()) {
+            if (auto &reg = owner_or_assert(); !construction.empty()) {
                 // fine as long as insert passes force_back true to try_emplace
-                for(const auto to = underlying_type::size(); from != to; ++from) {
+                for (const auto to = underlying_type::size(); from != to; ++from) {
                     const auto &entt = underlying_type::operator[](from);
                     const auto &value = this->get(entt);
                     construction.publish(reg, underlying_type::operator[](from));
@@ -353,6 +368,10 @@ namespace entt {
         update_type update;
         destruction_type destruction;
     };
+
+
+    template<typename T>
+    using change_storage_t = entt::change_mixin_t<entt::storage<T>, entt::basic_registry<> >;
 }
 
 
