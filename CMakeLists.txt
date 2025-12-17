@@ -12,13 +12,18 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(entt)
 
-add_executable(ecs_history main.cpp
-        change_mixin.hpp
-        change_reactive_mixin.hpp
-        change.cpp
-        change.hpp
-        change_applier.cpp
-        change_applier.hpp
-        static_entity.hpp
-)
-target_link_libraries(ecs_history EnTT::EnTT)
+add_library(ecs-history
+        include/change.hpp
+        include/change_applier.hpp
+        include/change_mixin.hpp
+        include/change_reactive_mixin.hpp
+        include/commit.hpp
+        include/static_entity.hpp
+        include/monitor.hpp)
+target_include_directories(ecs-history PUBLIC include)
+target_sources(ecs-history PUBLIC
+        src/change.cpp
+        src/change_applier.cpp
+        src/commit.cpp
+        src/static_entity.cpp)
+

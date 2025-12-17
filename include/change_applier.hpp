@@ -12,10 +12,10 @@
 template<typename T>
 class component_change_applier_t final : public component_change_supplier_t<T> {
     entt::registry &reg;
-    static_entities_t& static_entities;
+    static_entities_t &static_entities;
 
 public:
-    explicit component_change_applier_t(static_entities_t& static_entities, entt::registry &reg)
+    explicit component_change_applier_t(static_entities_t &static_entities, entt::registry &reg)
         : reg(reg), static_entities(static_entities) {
     }
 
@@ -42,31 +42,23 @@ class entity_change_supplier_t {
 public:
     virtual ~entity_change_supplier_t() = default;
 
-    virtual void apply(const entity_create_change_t& c) = 0;
-    virtual void apply(const entity_destroy_change_t& c) = 0;
+    virtual void apply(const entity_create_change_t &c) = 0;
+
+    virtual void apply(const entity_destroy_change_t &c) = 0;
 };
 
 class entity_change_applier_t final : public entity_change_supplier_t {
     entt::registry &reg;
-    static_entities_t& static_entities;
+    static_entities_t &static_entities;
 
 public:
-    explicit entity_change_applier_t(static_entities_t& static_entities, entt::registry &reg)
+    explicit entity_change_applier_t(static_entities_t &static_entities, entt::registry &reg)
         : reg(reg), static_entities(static_entities) {
     }
 
-    void apply(const entity_create_change_t &c) override {
-        const static_entity_t static_entity = c.entt;
-        const entt::entity entt = reg.create();
-        static_entities.create(entt, static_entity);
-    }
+    void apply(const entity_create_change_t &c) override;
 
-    void apply(const entity_destroy_change_t &c) override {
-        const static_entity_t static_entity = c.entt;
-        const entt::entity entt = static_entities.get_entity(static_entity);
-        static_entities.remove(entt);
-        reg.destroy(entt);
-    }
+    void apply(const entity_destroy_change_t &c) override;
 };
 
 
