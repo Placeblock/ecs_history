@@ -13,14 +13,14 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(entt)
 
 add_library(ecs-history
-        include/change.hpp
-        include/change_applier.hpp
-        include/change_mixin.hpp
-        include/change_reactive_mixin.hpp
-        include/commit.hpp
-        include/static_entity.hpp
-        include/monitor.hpp
-        include/registry.hpp)
+        include/ecs_history/change.hpp
+        include/ecs_history/change_applier.hpp
+        include/ecs_history/change_mixin.hpp
+        include/ecs_history/change_reactive_mixin.hpp
+        include/ecs_history/commit.hpp
+        include/ecs_history/static_entity.hpp
+        include/ecs_history/monitor.hpp
+        include/ecs_history/registry.hpp)
 target_include_directories(ecs-history PUBLIC include)
 target_sources(ecs-history PUBLIC
         src/change.cpp

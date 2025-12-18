@@ -2,7 +2,9 @@
 // Created by felix on 13.12.25.
 //
 
-#include "change_applier.hpp"
+#include "ecs_history/change_applier.hpp"
+
+using namespace ecs_history;
 
 void entity_change_applier_t::apply(const entity_create_change_t &c) {
     const static_entity_t static_entity = c.entt;

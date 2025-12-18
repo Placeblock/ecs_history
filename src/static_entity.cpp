@@ -2,7 +2,9 @@
 // Created by felix on 17.12.25.
 //
 
-#include "static_entity.hpp"
+#include "ecs_history/static_entity.hpp"
+
+using namespace ecs_history;
 
 uint64_t static_entities_t::create(const entt::entity entt) {
     static_entity_t static_entity = this->next++;

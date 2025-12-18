@@ -7,6 +7,7 @@
 
 #include "monitor.hpp"
 
+
 namespace ecs_history {
     typedef std::vector<std::shared_ptr<base_component_monitor_t> > component_monitor_list_t;
 
@@ -17,6 +18,7 @@ namespace ecs_history {
             throw std::runtime_error(
                 "Cannot record changes for component. Static entities not found in registry context.");
         }
+
         auto &entities = reg.ctx().get<static_entities_t>();
         std::shared_ptr<component_monitor_t<T> > monitor = std::make_shared<component_monitor_t<T> >(entities, reg, id);
         if (reg.ctx().contains<component_monitor_list_t>()) {

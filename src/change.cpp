@@ -2,8 +2,10 @@
 // Created by felix on 11.12.25.
 //
 
-#include "change.hpp"
-#include "change_applier.hpp"
+#include "ecs_history/change.hpp"
+#include "ecs_history/change_applier.hpp"
+
+using namespace ecs_history;
 
 std::unique_ptr<entity_change_t> entity_create_change_t::invert() const {
     std::unique_ptr<entity_change_t> change = std::make_unique<entity_destroy_change_t>(this->entt);
