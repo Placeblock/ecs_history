@@ -21,19 +21,19 @@ namespace ecs_history {
         }
 
         void apply(const construct_change_t<T> &c) override {
-            const static_entity_t static_entity = c.entt;
+            const static_entity_t static_entity = c.static_entity;
             const entt::entity entt = static_entities.get_entity(static_entity);
             reg.emplace<T>(entt, c.value);
         }
 
         void apply(const update_change_t<T> &c) override {
-            const static_entity_t static_entity = c.entt;
+            const static_entity_t static_entity = c.static_entity;
             const entt::entity entt = static_entities.get_entity(static_entity);
             reg.replace<T>(entt, c.new_value);
         }
 
         void apply(const destruct_change_t<T> &c) override {
-            const static_entity_t static_entity = c.entt;
+            const static_entity_t static_entity = c.static_entity;
             const entt::entity entt = static_entities.get_entity(static_entity);
             reg.remove<T>(entt);
         }

@@ -9,7 +9,7 @@ using namespace ecs_history;
 uint64_t static_entities_t::create(const entt::entity entt) {
     static_entity_t static_entity = this->next++;
     this->static_entities.emplace(entt, static_entity);
-    this->entities[static_entity] = {entt, 0};
+    this->entities[static_entity] = {entt};
     return static_entity;
 }
 
@@ -18,7 +18,7 @@ void static_entities_t::create(const entt::entity entt, static_entity_t static_e
         throw std::runtime_error("static entity already exists");
     }
     this->static_entities.emplace(entt, static_entity);
-    this->entities[static_entity] = {entt, 0};
+    this->entities[static_entity] = {entt};
 }
 
 void static_entities_t::remove(const entt::entity entt) {
@@ -42,12 +42,4 @@ entt::entity static_entities_t::get_entity(const static_entity_t static_entity) 
         throw std::runtime_error("static entity does not exist");
     }
     return this->entities.at(static_entity).entt;
-}
-
-void static_entities_t::increase_version(const static_entity_t entity) {
-    this->entities.at(entity).version++;
-}
-
-uint16_t static_entities_t::get_version(const static_entity_t entity) const {
-    return this->entities.at(entity).version;
 }

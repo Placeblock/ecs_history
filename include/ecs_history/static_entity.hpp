@@ -12,13 +12,8 @@
 #define STATIC_ENTITY_TYPE uint64_t
 #endif
 
-#ifndef ENTITY_VERSION_TYPE
-#define ENTITY_VERSION_TYPE uint16_t
-#endif
-
 namespace ecs_history {
     using static_entity_t = STATIC_ENTITY_TYPE;
-    using entity_version_t = ENTITY_VERSION_TYPE;
 
     class static_entities_t {
         struct static_entity_container_t {
@@ -27,7 +22,6 @@ namespace ecs_history {
 
         struct entity_container {
             entt::entity entt;
-            entity_version_t version;
         };
 
         entt::storage<static_entity_container_t> static_entities;
@@ -44,10 +38,6 @@ namespace ecs_history {
         [[nodiscard]] static_entity_t get_static_entity(entt::entity entt) const;
 
         [[nodiscard]] entt::entity get_entity(static_entity_t static_entity) const;
-
-        void increase_version(static_entity_t entity);
-
-        [[nodiscard]] entity_version_t get_version(static_entity_t entity) const;
     };
 }
 

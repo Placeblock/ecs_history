@@ -8,8 +8,7 @@
 using namespace ecs_history;
 
 std::unique_ptr<entity_change_t> entity_create_change_t::invert() const {
-    std::unique_ptr<entity_change_t> change = std::make_unique<entity_destroy_change_t>(this->entt);
-    return change;
+    return std::make_unique<entity_destroy_change_t>(this->static_entity);
 }
 
 void entity_create_change_t::apply(entity_change_supplier_t &applier) const {
@@ -17,7 +16,7 @@ void entity_create_change_t::apply(entity_change_supplier_t &applier) const {
 }
 
 std::unique_ptr<entity_change_t> entity_destroy_change_t::invert() const {
-    return std::make_unique<entity_create_change_t>(this->entt);
+    return std::make_unique<entity_create_change_t>(this->static_entity);
 }
 
 void entity_destroy_change_t::apply(entity_change_supplier_t &applier) const {

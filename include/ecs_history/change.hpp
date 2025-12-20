@@ -16,18 +16,15 @@ namespace ecs_history {
     struct entity_destroy_change_t;
 
     struct entity_change_t {
-        const static_entity_t entt;
-#ifdef CHANGE_INCLUDE_ENTITY_VERSION
-        const entity_version_t version;
-#endif
+        const static_entity_t static_entity;
 
-        explicit entity_change_t(const static_entity_t entt) : entt(entt) {
+        explicit entity_change_t(const static_entity_t static_entity) : static_entity(static_entity) {
         }
 
         [[nodiscard]] virtual std::unique_ptr<entity_change_t> invert() const = 0;
 
         [[nodiscard]] size_t size() const {
-            return sizeof(static_entity_t);
+            return sizeof(*this);
         }
 
         virtual void apply(entity_change_supplier_t &applier) const = 0;
@@ -36,7 +33,7 @@ namespace ecs_history {
     };
 
     struct entity_create_change_t final : entity_change_t {
-        explicit entity_create_change_t(const static_entity_t entt) : entity_change_t(entt) {
+        explicit entity_create_change_t(const static_entity_t static_entity) : entity_change_t(static_entity) {
         }
 
         [[nodiscard]] std::unique_ptr<entity_change_t> invert() const override;
@@ -45,7 +42,7 @@ namespace ecs_history {
     };
 
     struct entity_destroy_change_t final : entity_change_t {
-        explicit entity_destroy_change_t(const static_entity_t entt) : entity_change_t(entt) {
+        explicit entity_destroy_change_t(const static_entity_t static_entity) : entity_change_t(static_entity) {
         }
 
         [[nodiscard]] std::unique_ptr<entity_change_t> invert() const override;
@@ -55,9 +52,9 @@ namespace ecs_history {
 
     template<typename T>
     struct component_change_t {
-        const static_entity_t entt;
+        const static_entity_t static_entity;
 
-        explicit component_change_t(const static_entity_t entt) : entt(entt) {
+        explicit component_change_t(const static_entity_t static_entity) : static_entity(static_entity) {
         }
 
         [[nodiscard]] virtual size_t size() const {
@@ -78,8 +75,8 @@ namespace ecs_history {
     struct construct_change_t final : component_change_t<T> {
         const T value;
 
-        explicit construct_change_t(const static_entity_t entt, T value)
-            : component_change_t<T>(entt), value(value) {
+        explicit construct_change_t(const static_entity_t static_entity, T value)
+            : component_change_t<T>(static_entity), value(value) {
         }
 
         [[nodiscard]] size_t size() const override {
@@ -87,7 +84,7 @@ namespace ecs_history {
         }
 
         [[nodiscard]] std::unique_ptr<component_change_t<T> > invert() const override {
-            return std::make_unique<destruct_change_t<T> >(this->entt, value);
+            return std::make_unique<destruct_change_t<T> >(this->static_entity, value);
         }
 
         void apply(component_change_supplier_t<T> &applier) const override {
@@ -100,8 +97,8 @@ namespace ecs_history {
         const T old_value;
         const T new_value;
 
-        explicit update_change_t(const static_entity_t entt, T old_value, T new_value)
-            : component_change_t<T>(entt), old_value(old_value), new_value(new_value) {
+        explicit update_change_t(const static_entity_t static_entity, T old_value, T new_value)
+            : component_change_t<T>(static_entity), old_value(old_value), new_value(new_value) {
         }
 
         [[nodiscard]] size_t size() const override {
@@ -109,7 +106,7 @@ namespace ecs_history {
         }
 
         [[nodiscard]] std::unique_ptr<component_change_t<T> > invert() const override {
-            return std::make_unique<update_change_t>(this->entt, new_value, old_value);
+            return std::make_unique<update_change_t>(this->static_entity, new_value, old_value);
         }
 
         void apply(component_change_supplier_t<T> &applier) const override {
@@ -121,8 +118,8 @@ namespace ecs_history {
     struct destruct_change_t final : component_change_t<T> {
         const T old_value;
 
-        explicit destruct_change_t(const static_entity_t entt, T old_value)
-            : component_change_t<T>(entt), old_value(old_value) {
+        explicit destruct_change_t(const static_entity_t static_entity, T old_value)
+            : component_change_t<T>(static_entity), old_value(old_value) {
         }
 
         [[nodiscard]] size_t size() const override {
@@ -130,7 +127,7 @@ namespace ecs_history {
         }
 
         [[nodiscard]] std::unique_ptr<component_change_t<T> > invert() const override {
-            return std::make_unique<construct_change_t<T> >(this->entt, old_value);
+            return std::make_unique<construct_change_t<T> >(this->static_entity, old_value);
         }
 
         void apply(component_change_supplier_t<T> &applier) const override {
@@ -152,11 +149,11 @@ namespace ecs_history {
 
     class any_component_change_supplier_t {
     public:
-        virtual void apply_construct(entt::meta_any &value) = 0;
+        virtual void apply_construct(static_entity_t static_entity, entt::meta_any &value) = 0;
 
-        virtual void apply_update(entt::meta_any &old_value, entt::meta_any &new_value) = 0;
+        virtual void apply_update(static_entity_t static_entity, entt::meta_any &old_value, entt::meta_any &new_value) = 0;
 
-        virtual void apply_destruct(entt::meta_any &old_value) = 0;
+        virtual void apply_destruct(static_entity_t static_entity, entt::meta_any &old_value) = 0;
 
         virtual ~any_component_change_supplier_t() = default;
     };
