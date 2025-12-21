@@ -7,9 +7,11 @@
 
 #include "monitor.hpp"
 
+using namespace entt::literals;
 
 namespace ecs_history {
     typedef std::vector<std::shared_ptr<base_component_monitor_t> > component_monitor_list_t;
+    using reactive_entity_storage = entt::storage_type_t<entt::reactive, entt::entity>;
 
     template<typename T>
     void record_changes(entt::registry &reg,
@@ -20,7 +22,10 @@ namespace ecs_history {
         }
 
         if constexpr (std::is_same_v<T, entt::entity>) {
-            // TODO: CREATE ENTITY MONITOR STORAGE
+            reactive_entity_storage &created_storage = reg.storage<entt::reactive>("entity_created_storage"_hs);
+            reactive_entity_storage &destroyed_storage = reg.storage<entt::reactive>("entity_destroyed_storage"_hs);
+            created_storage.on_construct<entt::entity>();
+            destroyed_storage.on_destroy<entt::entity>();
         } else {
             auto &entities = reg.ctx().get<static_entities_t>();
             std::shared_ptr<component_monitor_t<T> > monitor = std::make_shared<component_monitor_t<T> >(entities, reg, id);
