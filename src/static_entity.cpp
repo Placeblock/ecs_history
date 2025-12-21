@@ -21,13 +21,14 @@ void static_entities_t::create(const entt::entity entt, static_entity_t static_e
     this->entities[static_entity] = {entt};
 }
 
-void static_entities_t::remove(const entt::entity entt) {
-    if (!this->static_entities.contains(entt)) {
-        throw std::runtime_error("static entity does not exist");
+entt::entity static_entities_t::remove(const static_entity_t static_entity) {
+    if (this->entities.contains(static_entity)) {
+        throw std::runtime_error("static entity does not exist exists");
     }
-    const static_entity_t static_entity = this->static_entities.get(entt).id;
-    this->static_entities.erase(entt);
+    const entt::entity entt = this->entities.at(static_entity).entt;
     this->entities.erase(static_entity);
+    this->static_entities.erase(entt);
+    return entt;
 }
 
 static_entity_t static_entities_t::get_static_entity(const entt::entity entt) const {

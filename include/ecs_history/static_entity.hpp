@@ -33,7 +33,7 @@ namespace ecs_history {
 
         void create(entt::entity entt, static_entity_t static_entity);
 
-        void remove(entt::entity entt);
+        entt::entity remove(static_entity_t static_entity);
 
         [[nodiscard]] static_entity_t get_static_entity(entt::entity entt) const;
 

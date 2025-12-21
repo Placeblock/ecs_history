@@ -11,44 +11,6 @@
 namespace ecs_history {
     template<typename T>
     class component_change_supplier_t;
-    class entity_change_supplier_t;
-
-    struct entity_destroy_change_t;
-
-    struct entity_change_t {
-        const static_entity_t static_entity;
-
-        explicit entity_change_t(const static_entity_t static_entity) : static_entity(static_entity) {
-        }
-
-        [[nodiscard]] virtual std::unique_ptr<entity_change_t> invert() const = 0;
-
-        [[nodiscard]] size_t size() const {
-            return sizeof(*this);
-        }
-
-        virtual void apply(entity_change_supplier_t &applier) const = 0;
-
-        virtual ~entity_change_t() = default;
-    };
-
-    struct entity_create_change_t final : entity_change_t {
-        explicit entity_create_change_t(const static_entity_t static_entity) : entity_change_t(static_entity) {
-        }
-
-        [[nodiscard]] std::unique_ptr<entity_change_t> invert() const override;
-
-        void apply(entity_change_supplier_t &applier) const override;
-    };
-
-    struct entity_destroy_change_t final : entity_change_t {
-        explicit entity_destroy_change_t(const static_entity_t static_entity) : entity_change_t(static_entity) {
-        }
-
-        [[nodiscard]] std::unique_ptr<entity_change_t> invert() const override;
-
-        void apply(entity_change_supplier_t &applier) const override;
-    };
 
     template<typename T>
     struct component_change_t {

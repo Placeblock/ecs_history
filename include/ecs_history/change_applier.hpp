@@ -38,29 +38,6 @@ namespace ecs_history {
             reg.remove<T>(entt);
         }
     };
-
-    class entity_change_supplier_t {
-    public:
-        virtual ~entity_change_supplier_t() = default;
-
-        virtual void apply(const entity_create_change_t &c) = 0;
-
-        virtual void apply(const entity_destroy_change_t &c) = 0;
-    };
-
-    class entity_change_applier_t final : public entity_change_supplier_t {
-        entt::registry &reg;
-        static_entities_t &static_entities;
-
-    public:
-        explicit entity_change_applier_t(static_entities_t &static_entities, entt::registry &reg)
-            : reg(reg), static_entities(static_entities) {
-        }
-
-        void apply(const entity_create_change_t &c) override;
-
-        void apply(const entity_destroy_change_t &c) override;
-    };
 }
 
 

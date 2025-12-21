@@ -18,6 +18,7 @@ namespace ecs_history {
 
         virtual void supply(any_component_change_supplier_t &supplier) const = 0;
         virtual void for_entity(std::function<void(static_entity_t static_entity)> callback) const = 0;
+        [[nodiscard]] virtual size_t count() const = 0;
 
         virtual ~base_component_change_set_t() = default;
     };
@@ -95,6 +96,10 @@ namespace ecs_history {
             for (const auto& change : this->changes) {
                 callback(change->static_entity);
             }
+        }
+
+        [[nodiscard]] size_t count() const override {
+            return this->changes.size();
         }
     };
 }
