@@ -10,26 +10,26 @@
 
 
 namespace ecs_history {
-    class base_component_change_set_t {
+    class base_change_set_t {
     public:
         entt::id_type id;
 
-        explicit base_component_change_set_t(const entt::id_type id) : id(id) {}
+        explicit base_change_set_t(const entt::id_type id) : id(id) {}
 
-        virtual void supply(any_component_change_supplier_t &supplier) const = 0;
+        virtual void supply(any_change_supplier_t &supplier) const = 0;
         virtual void for_entity(std::function<void(static_entity_t static_entity)> callback) const = 0;
         [[nodiscard]] virtual size_t count() const = 0;
 
-        virtual ~base_component_change_set_t() = default;
+        virtual ~base_change_set_t() = default;
     };
 
     template<typename T>
-    class component_change_set_t final : public base_component_change_set_t {
+    class change_set_t final : public base_change_set_t {
         std::vector<std::unique_ptr<component_change_t<T> > > changes;
 
     public:
-        explicit component_change_set_t(const entt::id_type id = entt::type_hash<T>::value())
-            : base_component_change_set_t(id) {
+        explicit change_set_t(const entt::id_type id = entt::type_hash<T>::value())
+            : base_change_set_t(id) {
         }
 
         [[nodiscard]] size_t size() const {
@@ -40,8 +40,8 @@ namespace ecs_history {
             return size;
         }
 
-        [[nodiscard]] std::unique_ptr<component_change_set_t> invert() const {
-            auto new_commit = component_change_set_t{id};
+        [[nodiscard]] std::unique_ptr<change_set_t> invert() const {
+            auto new_commit = change_set_t{id};
 
             for (const auto &change: this->changes) {
                 new_commit.add_change(change->invert());
@@ -54,17 +54,17 @@ namespace ecs_history {
             this->changes.emplace_back(std::move(change));
         }
 
-        void supply(component_change_supplier_t<T> &supplier) {
+        void supply(change_supplier_t<T> &supplier) {
             for (const auto &change: this->changes) {
                 change->apply(supplier);
             }
         }
 
-        class meta_component_change_supplier_t final : public component_change_supplier_t<T> {
-            any_component_change_supplier_t &any_supplier;
+        class meta_change_supplier_t final : public change_supplier_t<T> {
+            any_change_supplier_t &any_supplier;
 
         public:
-            explicit meta_component_change_supplier_t(any_component_change_supplier_t &any_supplier)
+            explicit meta_change_supplier_t(any_change_supplier_t &any_supplier)
                 : any_supplier(any_supplier) {
             }
 
@@ -85,8 +85,8 @@ namespace ecs_history {
             }
         };
 
-        void supply(any_component_change_supplier_t &any_supplier) const override {
-            meta_component_change_supplier_t meta_supplier{any_supplier};
+        void supply(any_change_supplier_t &any_supplier) const override {
+            meta_change_supplier_t meta_supplier{any_supplier};
             for (const auto &change: this->changes) {
                 change->apply(meta_supplier);
             }

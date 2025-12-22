@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 20)
 FetchContent_Declare(
         entt
         GIT_REPOSITORY https://github.com/skypjack/entt.git
-        GIT_TAG v3.15.0
+        GIT_TAG v3.16.0
 )
 FetchContent_MakeAvailable(entt)
 

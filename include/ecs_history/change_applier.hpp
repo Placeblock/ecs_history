@@ -13,12 +13,12 @@ using namespace entt::literals;
 
 namespace ecs_history {
     template<typename T>
-    class component_change_applier_t final : public component_change_supplier_t<T> {
+    class change_applier_t final : public change_supplier_t<T> {
         entt::registry &reg;
         static_entities_t &static_entities;
 
     public:
-        explicit component_change_applier_t(static_entities_t &static_entities, entt::registry &reg)
+        explicit change_applier_t(static_entities_t &static_entities, entt::registry &reg)
             : reg(reg), static_entities(static_entities) {
         }
 
@@ -41,20 +41,22 @@ namespace ecs_history {
         }
     };
 
-    class any_component_change_applier_t final : public any_component_change_supplier_t {
+    class any_change_applier_t final : public any_change_supplier_t {
         entt::registry &reg;
         static_entities_t &static_entities;
 
         static void apply(entt::registry &reg, const entt::entity entt, const entt::meta_any &value) {
             const auto emplaceFunc = value.type().func("emplace"_hs);
             if (!emplaceFunc) {
-                const std::string type_name{value.base().type().name()};
+                const std::string type_name{value.base().info().name()};
                 throw std::runtime_error("cannot find emplace function for deserialized change " + type_name);
             }
-            emplaceFunc.invoke({}, entt::forward_as_meta(reg), entt, value.as_ref());
+            if (!emplaceFunc.invoke( {}, entt::forward_as_meta(reg), entt::forward_as_meta(entt), value.as_ref())) {
+                throw std::runtime_error("failed to apply component to entity from change");
+            }
         }
     public:
-        explicit any_component_change_applier_t(entt::registry &reg, static_entities_t &static_entities)
+        explicit any_change_applier_t(entt::registry &reg, static_entities_t &static_entities)
             : reg(reg), static_entities(static_entities) {
         }
 

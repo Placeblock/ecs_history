@@ -19,7 +19,7 @@ namespace ecs_history {
             : id(id) {
         }
 
-        virtual std::unique_ptr<base_component_change_set_t> commit() = 0;
+        virtual std::unique_ptr<base_change_set_t> commit() = 0;
         virtual void clear() = 0;
 
         virtual ~base_component_monitor_t() = default;
@@ -51,8 +51,8 @@ namespace ecs_history {
             destructed_storage.on_destroy();
         }
 
-        std::unique_ptr<base_component_change_set_t> commit() override {
-            std::unique_ptr<component_change_set_t<T> > change_set = std::make_unique<component_change_set_t<T> >(this->id);
+        std::unique_ptr<base_change_set_t> commit() override {
+            std::unique_ptr<change_set_t<T> > change_set = std::make_unique<change_set_t<T> >(this->id);
             for (auto [entt, change]: constructed_storage.each()) {
                 static_entity_t static_entity = this->entities.get_static_entity(entt);
                 change_set->add_change(std::make_unique<construct_change_t<T> >(static_entity, change.value));

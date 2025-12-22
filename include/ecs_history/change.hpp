@@ -10,7 +10,7 @@
 
 namespace ecs_history {
     template<typename T>
-    class component_change_supplier_t;
+    class change_supplier_t;
 
     template<typename T>
     struct component_change_t {
@@ -25,7 +25,7 @@ namespace ecs_history {
 
         [[nodiscard]] virtual std::unique_ptr<component_change_t> invert() const = 0;
 
-        virtual void apply(component_change_supplier_t<T> &applier) const = 0;
+        virtual void apply(change_supplier_t<T> &applier) const = 0;
 
         virtual ~component_change_t() = default;
     };
@@ -49,7 +49,7 @@ namespace ecs_history {
             return std::make_unique<destruct_change_t<T> >(this->static_entity, value);
         }
 
-        void apply(component_change_supplier_t<T> &applier) const override {
+        void apply(change_supplier_t<T> &applier) const override {
             applier.apply(*this);
         }
     };
@@ -71,7 +71,7 @@ namespace ecs_history {
             return std::make_unique<update_change_t>(this->static_entity, new_value, old_value);
         }
 
-        void apply(component_change_supplier_t<T> &applier) const override {
+        void apply(change_supplier_t<T> &applier) const override {
             applier.apply(*this);
         }
     };
@@ -92,13 +92,13 @@ namespace ecs_history {
             return std::make_unique<construct_change_t<T> >(this->static_entity, old_value);
         }
 
-        void apply(component_change_supplier_t<T> &applier) const override {
+        void apply(change_supplier_t<T> &applier) const override {
             applier.apply(*this);
         }
     };
 
     template<typename T>
-    class component_change_supplier_t {
+    class change_supplier_t {
     public:
         virtual void apply(const construct_change_t<T> &c) = 0;
 
@@ -106,10 +106,10 @@ namespace ecs_history {
 
         virtual void apply(const destruct_change_t<T> &c) = 0;
 
-        virtual ~component_change_supplier_t() = default;
+        virtual ~change_supplier_t() = default;
     };
 
-    class any_component_change_supplier_t {
+    class any_change_supplier_t {
     public:
         virtual void apply_construct(static_entity_t static_entity, entt::meta_any &value) = 0;
 
@@ -117,7 +117,7 @@ namespace ecs_history {
 
         virtual void apply_destruct(static_entity_t static_entity, entt::meta_any &old_value) = 0;
 
-        virtual ~any_component_change_supplier_t() = default;
+        virtual ~any_change_supplier_t() = default;
     };
 }
 
