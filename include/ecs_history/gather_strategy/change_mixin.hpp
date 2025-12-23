@@ -123,17 +123,6 @@ namespace entt {
               construction{allocator},
               destruction{allocator},
               update{allocator} {
-            if constexpr (internal::has_on_construct<typename underlying_type::element_type, Registry>::value) {
-                entt::sink{construction}.template connect<&underlying_type::element_type::on_construct>();
-            }
-
-            if constexpr (internal::has_on_update<typename underlying_type::element_type, Registry>::value) {
-                entt::sink{update}.template connect<&underlying_type::element_type::on_update>();
-            }
-
-            if constexpr (internal::has_on_destroy<typename underlying_type::element_type, Registry>::value) {
-                entt::sink{destruction}.template connect<&underlying_type::element_type::on_destroy>();
-            }
         }
 
         /*! @brief Default copy constructor, deleted on purpose. */

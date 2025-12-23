@@ -2,8 +2,8 @@
 // Created by felix on 17.12.25.
 //
 
-#ifndef ECS_NET_MONITOR_HPP
-#define ECS_NET_MONITOR_HPP
+#ifndef ECS_HISTORY_MONITOR_HPP
+#define ECS_HISTORY_MONITOR_HPP
 
 #include <entt/entt.hpp>
 #include "change_reactive_mixin.hpp"
@@ -20,6 +20,8 @@ namespace ecs_history {
         }
 
         virtual std::unique_ptr<base_change_set_t> commit() = 0;
+        virtual void disable() = 0;
+        virtual void enable() = 0;
         virtual void clear() = 0;
 
         virtual ~base_component_monitor_t() = default;
@@ -44,11 +46,9 @@ namespace ecs_history {
               updated_storage(id),
               destructed_storage(id) {
             constructed_storage.bind(registry);
-            constructed_storage.on_construct();
             updated_storage.bind(registry);
-            updated_storage.on_update();
             destructed_storage.bind(registry);
-            destructed_storage.on_destroy();
+            this->enable();
         }
 
         std::unique_ptr<base_change_set_t> commit() override {
@@ -74,6 +74,18 @@ namespace ecs_history {
             destructed_storage.clear();
         }
 
+        void disable() override {
+            constructed_storage.disconnect();
+            updated_storage.disconnect();
+            destructed_storage.disconnect();
+        }
+
+        void enable() override {
+            constructed_storage.connect();
+            updated_storage.connect();
+            destructed_storage.connect();
+        }
+
     private:
         static_entities_t &entities;
         const entt::storage<T> &storage;
@@ -83,4 +95,4 @@ namespace ecs_history {
     };
 }
 
-#endif //ECS_NET_MONITOR_HPP
+#endif //ECS_HISTORY_MONITOR_HPP

@@ -18,6 +18,7 @@ namespace ecs_history {
 
         virtual void supply(any_change_supplier_t &supplier) const = 0;
         virtual void for_entity(std::function<void(static_entity_t static_entity)> callback) const = 0;
+        virtual std::unique_ptr<base_change_set_t> invert() const = 0;
         [[nodiscard]] virtual size_t count() const = 0;
 
         virtual ~base_change_set_t() = default;
@@ -40,11 +41,11 @@ namespace ecs_history {
             return size;
         }
 
-        [[nodiscard]] std::unique_ptr<change_set_t> invert() const {
-            auto new_commit = change_set_t{id};
+        std::unique_ptr<base_change_set_t> invert() const override {
+            auto new_commit = std::make_unique<change_set_t>(this->id);
 
             for (const auto &change: this->changes) {
-                new_commit.add_change(change->invert());
+                new_commit->add_change(change->invert());
             }
 
             return std::move(new_commit);
@@ -101,6 +102,7 @@ namespace ecs_history {
         [[nodiscard]] size_t count() const override {
             return this->changes.size();
         }
+
     };
 }
 

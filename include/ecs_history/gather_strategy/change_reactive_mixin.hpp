@@ -120,7 +120,6 @@ namespace entt {
         explicit change_reactive_mixin_t(const allocator_type &allocator, const id_type id = type_hash<Type>::value())
             : underlying_type{allocator},
               owner{},
-              conn{allocator},
               id(id) {
         }
 
@@ -175,42 +174,22 @@ namespace entt {
             return *this;
         }
 
-        /**
-         * @brief Makes storage _react_ to creation of objects of the given type.
-         * @tparam Candidate Function to use to _react_ to the event.
-         * @return This mixin.
-         */
-        change_reactive_mixin_t &on_construct()
-            requires std::same_as<change_type, construct_component_change_t<value_type> > {
-            auto curr = owner_or_assert().template storage<value_type>(id).on_construct().template connect<&
-                change_reactive_mixin_t::emplace_creation>(*this);
-            conn.push_back(std::move(curr));
-            return *this;
+        void connect() {
+            this->disconnect();
+            if constexpr (std::same_as<change_type, construct_component_change_t<value_type> >) {
+                this->conn = owner_or_assert().template storage<value_type>(id).on_construct().template connect<&
+                    change_reactive_mixin_t::emplace_creation>(*this);
+            } else if constexpr (std::same_as<change_type, update_component_change_t<value_type> >) {
+                this->conn = owner_or_assert().template storage<value_type>(id).on_update().template connect<&
+                    change_reactive_mixin_t::emplace_update>(*this);
+            } else if constexpr (std::same_as<change_type, destruct_component_change_t<value_type> >) {
+                this->conn = owner_or_assert().template storage<value_type>(id).on_destroy().template connect<&
+                    change_reactive_mixin_t::emplace_destruction>(*this);
+            }
         }
 
-        /**
-         * @brief Makes storage _react_ to update of objects of the given type.
-         * @return This mixin.
-         */
-        change_reactive_mixin_t &on_update()
-            requires std::same_as<change_type, update_component_change_t<value_type> > {
-            auto curr = owner_or_assert().template storage<value_type>(id).on_update().template connect<&
-                change_reactive_mixin_t::emplace_update>(*this);
-            conn.push_back(std::move(curr));
-            return *this;
-        }
-
-        /**
-         * @brief Makes storage _react_ to destruction of objects of the given type.
-         * @tparam Candidate Function to use to _react_ to the event.
-         * @return This mixin.
-         */
-        change_reactive_mixin_t &on_destroy()
-            requires std::same_as<change_type, destruct_component_change_t<value_type> > {
-            auto curr = owner_or_assert().template storage<value_type>(id).on_destroy().template connect<&
-                change_reactive_mixin_t::emplace_destruction>(*this);
-            conn.push_back(std::move(curr));
-            return *this;
+        void disconnect() {
+            this->reset();
         }
 
         /**
@@ -271,16 +250,14 @@ namespace entt {
 
         /*! @brief Releases all connections to the underlying registry, if any. */
         void reset() {
-            for (auto &&curr: conn) {
-                curr.release();
+            if (this->conn) {
+                this->conn.release();
             }
-
-            conn.clear();
         }
 
     private:
         basic_registry_type *owner;
-        container_type conn;
+        connection conn;
         id_type id;
     };
 }

@@ -3,6 +3,5 @@
 //
 
 #include "ecs_history/change.hpp"
-#include "ecs_history/change_applier.hpp"
 
 using namespace ecs_history;

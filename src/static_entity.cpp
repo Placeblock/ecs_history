@@ -22,7 +22,7 @@ void static_entities_t::create(const entt::entity entt, static_entity_t static_e
 }
 
 entt::entity static_entities_t::remove(const static_entity_t static_entity) {
-    if (this->entities.contains(static_entity)) {
+    if (!this->entities.contains(static_entity)) {
         throw std::runtime_error("static entity does not exist exists");
     }
     const entt::entity entt = this->entities.at(static_entity).entt;
