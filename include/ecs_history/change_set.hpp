@@ -45,10 +45,10 @@ public:
         return size;
     }
 
-    std::unique_ptr<base_change_set_t> invert() const override {
+    [[nodiscard]] std::unique_ptr<base_change_set_t> invert() const override {
         auto new_commit = std::make_unique<change_set_t>(this->id);
 
-        for (const auto &change : this->changes) {
+        for (const auto &change : this->changes | std::views::reverse) {
             new_commit->add_change(change->invert());
         }
 

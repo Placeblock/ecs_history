@@ -37,8 +37,10 @@ namespace ecs_history {
             }
 
             if constexpr (std::is_same_v<T, entt::entity>) {
-                reactive_entity_storage &created_storage = this->handle.storage<entt::reactive>("entity_created_storage"_hs);
-                reactive_entity_storage &destroyed_storage = this->handle.storage<entt::reactive>("entity_destroyed_storage"_hs);
+                auto &created_storage = this->handle.ctx().emplace_as<reactive_entity_storage>("created_entities_storage"_hs);
+                auto &destroyed_storage = this->handle.ctx().emplace_as<reactive_entity_storage>("destroyed_entities_storage"_hs);
+                created_storage.bind(this->handle);
+                destroyed_storage.bind(this->handle);
                 created_storage.on_construct<entt::entity>();
                 destroyed_storage.on_destroy<entt::entity>();
             } else {
