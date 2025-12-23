@@ -12,7 +12,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(entt)
 
-add_library(ecs-history
+add_library(ecs_history
         include/ecs_history/change.hpp
         include/ecs_history/change_applier.hpp
         include/ecs_history/gather_strategy/change_mixin.hpp
@@ -21,11 +21,11 @@ add_library(ecs-history
         include/ecs_history/static_entity.hpp
         include/ecs_history/gather_strategy/monitor.hpp
         include/ecs_history/gather_strategy/registry.hpp)
-target_include_directories(ecs-history PUBLIC include)
-target_sources(ecs-history PUBLIC
+target_include_directories(ecs_history PUBLIC include)
+target_sources(ecs_history PUBLIC
         src/change.cpp
         src/change_applier.cpp
         src/change_set.cpp
         src/static_entity.cpp)
-target_link_libraries(ecs-history EnTT::EnTT)
+target_link_libraries(ecs_history EnTT::EnTT)
 
