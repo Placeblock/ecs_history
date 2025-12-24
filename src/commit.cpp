@@ -4,6 +4,8 @@
 
 #include "../include/ecs_history/commit.hpp"
 
+#include "ecs_history/change_applier.hpp"
+
 using namespace ecs_history;
 
 commit_id::commit_id(const uint64_t part1, const uint64_t part2) : part1{part1}, part2{part2} {
@@ -81,4 +83,41 @@ std::unique_ptr<commit_t> ecs_history::create_commit(gather_strategy &gather_str
     }
 
     return std::move(commit);
+}
+
+bool ecs_history::can_apply_commit(entt::registry &reg, const commit_t &commit) {
+    auto version_handler = reg.ctx().get<entity_version_handler_t>();
+    return std::ranges::all_of(commit.entity_versions,
+                               [&](const auto &pair) {
+                                   return pair.second == version_handler.get_version(
+                                              pair.first);
+                               });
+}
+
+void ecs_history::apply_commit(entt::registry &reg,
+                               gather_strategy &gather_strategy,
+                               const commit_t &commit) {
+    auto &version_handler = reg.ctx().get<entity_version_handler_t>();
+    auto &static_entities = reg.ctx().get<static_entities_t>();
+    gather_strategy.disable();
+
+    for (const static_entity_t &created_entity : commit.created_entities) {
+        const entt::entity entt = reg.create();
+        static_entities.create(entt, created_entity);
+    }
+    any_change_applier_t applier{reg, static_entities};
+    for (const auto &change : commit.change_sets) {
+        change->supply(applier);
+    }
+    for (const static_entity_t &removed_entity : commit.destroyed_entities) {
+        const auto entt = static_entities.remove(removed_entity);
+        reg.destroy(entt);
+    }
+    for (const auto &[entity, version] : commit.entity_versions) {
+        commit.undo
+            ? version_handler.set_version(entity, version - 1)
+            : version_handler.set_version(entity, version + 1);
+    }
+
+    gather_strategy.enable();
 }

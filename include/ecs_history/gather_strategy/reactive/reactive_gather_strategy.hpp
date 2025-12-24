@@ -53,6 +53,10 @@ public:
             }
         }
     }
+
+    void disable() override;
+
+    void enable() override;
 };
 }
 

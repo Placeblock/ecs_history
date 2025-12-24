@@ -32,14 +32,17 @@ add_library(ecs_history
         include/ecs_history/entity_version.hpp
         include/ecs_history/gather_strategy/gather_strategy.hpp
         include/ecs_history/gather_strategy/reactive/reactive_gather_strategy.hpp
+        include/ecs_history/serialization/component.hpp
+        include/ecs_history/serialization/change.hpp
+        include/ecs_history/serialization/serialization.hpp
         src/gather_strategy/reactive/reactive_gather_strategy.cpp
         src/commit.cpp
         src/gather_strategy/reactive/monitor.cpp
         src/entity_version.cpp
-        include/ecs_history/serialization/component.hpp
-        include/ecs_history/serialization/change.hpp
         src/serialization/component.cpp
-        include/ecs_history/serialization/serialization.hpp)
+        src/change_applier.cpp
+        src/change_set.cpp
+        src/static_entity.cpp)
 target_include_directories(ecs_history PUBLIC include)
 target_link_libraries(ecs_history EnTT::EnTT cereal)
 

@@ -5,6 +5,7 @@
 #ifndef ECS_HISTORY_CHANGE_HPP
 #define ECS_HISTORY_CHANGE_HPP
 #include "ecs_history/change.hpp"
+#include "ecs_history/serialization/component.hpp"
 #include <cstdint>
 #include <entt/entt.hpp>
 

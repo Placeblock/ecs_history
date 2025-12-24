@@ -67,6 +67,11 @@ struct commit_t {
 std::unique_ptr<commit_t> create_commit(gather_strategy &gather_strategy,
                                         entity_version_handler_t &version_handler);
 
+
+bool can_apply_commit(entt::registry &reg, const commit_t &commit);
+
+void apply_commit(entt::registry &reg, gather_strategy &gather_strategy, const commit_t &commit);
+
 }
 
 #endif //ECS_HISTORY_COMMIT_HPP

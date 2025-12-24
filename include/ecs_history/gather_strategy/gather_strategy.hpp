@@ -18,6 +18,9 @@ public:
 
     virtual std::vector<static_entity_t> get_destroyed_entities() = 0;
 
+    virtual void disable() = 0;
+    virtual void enable() = 0;
+
     virtual ~gather_strategy() = default;
 };
 }

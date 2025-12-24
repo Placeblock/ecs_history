@@ -52,3 +52,40 @@ std::vector<static_entity_t> reactive_gather_strategy::get_destroyed_entities() 
     recorded_entities.clear();
     return destroyed_entities;
 }
+
+void reactive_gather_strategy::disable() {
+    if (this->reg.ctx().contains<std::vector<std::shared_ptr<
+        base_component_monitor_t> > >()) {
+        const auto &monitors = reg.ctx().get<std::vector<std::shared_ptr<
+            base_component_monitor_t> > >();
+        for (auto &monitor : monitors) {
+            monitor->disable();
+        }
+        }
+    if (this->reg.ctx().contains<reactive_entity_storage>("created_entities_storage"_hs)) {
+        auto &created_storage = reg.ctx().get<reactive_entity_storage>("created_entities_storage"_hs);
+        created_storage.reset();
+    }
+    if (this->reg.ctx().contains<reactive_entity_storage>("destroyed_entities_storage"_hs)) {
+        auto &destroyed_storage = reg.ctx().get<reactive_entity_storage>("destroyed_entities_storage"_hs);
+        destroyed_storage.reset();
+    }
+}
+
+void reactive_gather_strategy::enable() {
+    if (reg.ctx().contains<std::vector<std::shared_ptr<base_component_monitor_t> > >()) {
+        const auto &monitors = reg.ctx().get<std::vector<std::shared_ptr<
+            base_component_monitor_t> > >();
+        for (auto &monitor : monitors) {
+            monitor->enable();
+        }
+    }
+    if (reg.ctx().contains<reactive_entity_storage>("created_entities_storage"_hs)) {
+        auto &created_storage = reg.ctx().get<reactive_entity_storage>("created_entities_storage"_hs);
+        created_storage.on_construct<entt::entity>();
+    }
+    if (reg.ctx().contains<reactive_entity_storage>("destroyed_entities_storage"_hs)) {
+        auto &destroyed_storage = reg.ctx().get<reactive_entity_storage>("destroyed_entities_storage"_hs);
+        destroyed_storage.on_destroy<entt::entity>();
+    }
+}
