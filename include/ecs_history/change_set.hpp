@@ -14,8 +14,7 @@ class base_change_set_t {
 public:
     entt::id_type id;
 
-    explicit base_change_set_t(const entt::id_type id) : id(id) {
-    }
+    explicit base_change_set_t(entt::id_type id);
 
     virtual void supply(any_change_supplier_t &supplier) const = 0;
 
@@ -30,7 +29,7 @@ public:
 
 template<typename T>
 class change_set_t final : public base_change_set_t {
-    std::vector<std::unique_ptr<component_change_t<T> > > changes;
+    std::vector<std::unique_ptr<change_t<T> > > changes;
 
 public:
     explicit change_set_t(const entt::id_type id = entt::type_hash<T>::value())
@@ -55,7 +54,7 @@ public:
         return std::move(new_commit);
     }
 
-    void add_change(std::unique_ptr<component_change_t<T> > change) {
+    void add_change(std::unique_ptr<change_t<T> > change) {
         this->changes.emplace_back(std::move(change));
     }
 

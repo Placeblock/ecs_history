@@ -12,70 +12,52 @@
 using namespace entt::literals;
 
 namespace ecs_history {
-    template<typename T>
-    class change_applier_t final : public change_supplier_t<T> {
-        entt::registry &reg;
-        static_entities_t &static_entities;
+template<typename T>
+class change_applier_t final : public change_supplier_t<T> {
+    entt::registry &reg;
+    static_entities_t &static_entities;
 
-    public:
-        explicit change_applier_t(static_entities_t &static_entities, entt::registry &reg)
-            : reg(reg), static_entities(static_entities) {
-        }
+public:
+    explicit change_applier_t(static_entities_t &static_entities, entt::registry &reg)
+        : reg(reg), static_entities(static_entities) {
+    }
 
-        void apply(const construct_change_t<T> &c) override {
-            const static_entity_t static_entity = c.static_entity;
-            const entt::entity entt = static_entities.get_entity(static_entity);
-            reg.emplace<T>(entt, c.value);
-        }
+    void apply(const construct_change_t<T> &c) override {
+        const static_entity_t static_entity = c.static_entity;
+        const entt::entity entt = static_entities.get_entity(static_entity);
+        reg.emplace<T>(entt, c.value);
+    }
 
-        void apply(const update_change_t<T> &c) override {
-            const static_entity_t static_entity = c.static_entity;
-            const entt::entity entt = static_entities.get_entity(static_entity);
-            reg.replace<T>(entt, c.new_value);
-        }
+    void apply(const update_change_t<T> &c) override {
+        const static_entity_t static_entity = c.static_entity;
+        const entt::entity entt = static_entities.get_entity(static_entity);
+        reg.replace<T>(entt, c.new_value);
+    }
 
-        void apply(const destruct_change_t<T> &c) override {
-            const static_entity_t static_entity = c.static_entity;
-            const entt::entity entt = static_entities.get_entity(static_entity);
-            reg.remove<T>(entt);
-        }
-    };
+    void apply(const destruct_change_t<T> &c) override {
+        const static_entity_t static_entity = c.static_entity;
+        const entt::entity entt = static_entities.get_entity(static_entity);
+        reg.remove<T>(entt);
+    }
+};
 
-    class any_change_applier_t final : public any_change_supplier_t {
-        entt::registry &reg;
-        static_entities_t &static_entities;
+class any_change_applier_t final : public any_change_supplier_t {
+    entt::registry &reg;
+    static_entities_t &static_entities;
 
-        static void apply(entt::registry &reg, const entt::entity entt, const entt::meta_any &value) {
-            const auto emplaceFunc = value.type().func("emplace"_hs);
-            if (!emplaceFunc) {
-                const std::string type_name{value.base().info().name()};
-                throw std::runtime_error("cannot find emplace function for deserialized change " + type_name);
-            }
-            if (!emplaceFunc.invoke( {}, entt::forward_as_meta(reg), entt::forward_as_meta(entt), value.as_ref())) {
-                throw std::runtime_error("failed to apply component to entity from change");
-            }
-        }
-    public:
-        explicit any_change_applier_t(entt::registry &reg, static_entities_t &static_entities)
-            : reg(reg), static_entities(static_entities) {
-        }
+    static void apply(entt::registry &reg, entt::entity entt, const entt::meta_any &value);
 
-        void apply_construct(const static_entity_t static_entity, entt::meta_any &value) override {
-            const auto entt = this->static_entities.get_entity(static_entity);
-            apply(reg, entt, value);
-        }
+public:
+    explicit any_change_applier_t(entt::registry &reg, static_entities_t &static_entities);
 
-        void apply_update(const static_entity_t static_entity, entt::meta_any &old_value, entt::meta_any &new_value) override {
-            const auto entt = this->static_entities.get_entity(static_entity);
-            apply(reg, entt, new_value);
-        }
+    void apply_construct(static_entity_t static_entity, entt::meta_any &value) override;
 
-        void apply_destruct(const static_entity_t static_entity, entt::meta_any &old_value) override {
-            const auto entt = this->static_entities.get_entity(static_entity);
-            const auto storage = this->reg.storage(old_value.type().id());
-            storage->remove(entt);
-        }
-    };
+    void apply_update(static_entity_t static_entity,
+                      entt::meta_any &old_value,
+                      entt::meta_any &new_value) override;
+
+    void apply_destruct(static_entity_t static_entity, entt::meta_any &old_value) override;
+};
 }
 
 
