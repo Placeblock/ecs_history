@@ -13,7 +13,7 @@
 namespace ecs_history::serialization {
 
 constexpr entt::id_type custom_serialize_func_id = entt::hashed_string{"serialize"};
-constexpr entt::id_type custom_deserialize_func_id = entt::hashed_string{"serialize"};
+constexpr entt::id_type custom_deserialize_func_id = entt::hashed_string{"deserialize"};
 
 enum class traits_t : uint16_t {
     NO = 0x00,
