@@ -53,3 +53,4 @@ add_library(ecs_history ${ECS_HISTORY_LIBRARY_TYPE}
 target_include_directories(ecs_history PUBLIC include)
 target_link_libraries(ecs_history EnTT::EnTT cereal)
 
+install(TARGETS ecs_history)
