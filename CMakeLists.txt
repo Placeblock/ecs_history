@@ -20,7 +20,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(cereal)
 
-add_library(ecs_history
+option(ECS_HISTORY_SHARED "Build as shared lib")
+if (ECS_HISTORY_SHARED)
+    set(ECS_HISTORY_LIBRARY_TYPE SHARED)
+else ()
+    set(ECS_HISTORY_LIBRARY_TYPE STATIC)
+endif ()
+
+add_library(ecs_history ${ECS_HISTORY_LIBRARY_TYPE}
         include/ecs_history/change.hpp
         include/ecs_history/change_applier.hpp
         include/ecs_history/gather_strategy/reactive/change_mixin.hpp
