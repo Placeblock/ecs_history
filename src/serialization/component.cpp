@@ -13,6 +13,8 @@ void ecs_history::serialization::initialize_component_meta_types() {
     SERIALIZE_SIMPLE(int32_t);
     SERIALIZE_SIMPLE(int16_t);
     SERIALIZE_SIMPLE(int8_t);
+    SERIALIZE_SIMPLE(float);
+    SERIALIZE_SIMPLE(double);
     SERIALIZE_SIMPLE(char);
     SERIALIZE_SIMPLE(std::string);
 }
