@@ -26,7 +26,12 @@ class static_entities_t {
 
     entt::storage<static_entity_container_t> static_entities;
     std::map<static_entity_t, entity_container> entities;
-    static_entity_t next = UINT64_MAX / 2;
+    static_entity_t next;
+
+    static_entities_t() {
+        const auto entity_id_start = std::getenv("ENTITY_ID_START");
+        this->next = std::atol(entity_id_start);
+    }
 
 public:
     uint64_t create(entt::entity entt);
