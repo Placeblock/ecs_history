@@ -28,12 +28,12 @@ class static_entities_t {
     std::map<static_entity_t, entity_container> entities;
     static_entity_t next;
 
+public:
     static_entities_t() {
         const auto entity_id_start = std::getenv("ENTITY_ID_START");
         this->next = std::atol(entity_id_start);
     }
 
-public:
     uint64_t create(entt::entity entt);
 
     void create(entt::entity entt, static_entity_t static_entity);
