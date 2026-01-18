@@ -45,9 +45,9 @@ class any_change_applier_t final : public any_change_supplier_t {
     entt::registry &reg;
     static_entities_t &static_entities;
 
+public:
     static void apply(entt::registry &reg, entt::entity entt, const entt::meta_any &value);
 
-public:
     explicit any_change_applier_t(entt::registry &reg, static_entities_t &static_entities);
 
     void apply_construct(static_entity_t static_entity, entt::meta_any &value) override;

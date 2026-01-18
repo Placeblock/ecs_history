@@ -6,30 +6,84 @@
 #define ECS_HISTORY_SERIALIZATION_HPP
 #include "change.hpp"
 #include "component.hpp"
+#include "ecs_history/change_applier.hpp"
 #include "ecs_history/commit.hpp"
 #include "ecs_history/static_entity.hpp"
 #include <entt/entt.hpp>
 
 namespace ecs_history::serialization {
+
+template<typename Archive>
+void serialize_storage_info(Archive &archive, entt::id_type &&type, size_t &&size) {
+    archive(static_cast<uint64_t>(type));
+    archive(static_cast<uint32_t>(size));
+}
+
+template<typename Archive, bool Serialize>
+void serialize_entity_component(Archive &archive,
+                                static_entity_t &static_entity,
+                                entt::meta_any &value) {
+    archive(static_entity);
+    serialize_component<Archive, Serialize>(archive, value);
+}
+
 template<typename Archive>
 void serialize_storage(Archive &archive,
                        const entt::basic_sparse_set<> &storage,
                        const static_entities_t &static_entities) {
     const auto meta = entt::resolve(storage.info().hash());
-    archive(static_cast<uint64_t>(storage.info().hash()));
-    archive(static_cast<uint32_t>(storage.size()));
+    serialize_storage_info(archive, storage.info().hash(), storage.size());
     for (const auto &entt : storage) {
         static_entity_t static_entity = static_entities.get_static_entity(entt);
+        const void *raw_value = storage.value(entt);
+        entt::meta_any value = meta.from_void(raw_value);
+        serialize_entity_component<Archive, true>(archive, static_entity, value);
+    }
+}
+
+template<typename Archive>
+void deserialize_registry(Archive &archive, entt::registry &reg) {
+    auto &static_entities = reg.ctx().get<static_entities_t>();
+    uint32_t entities;
+    archive(entities);
+    for (int i = 0; i < entities; ++i) {
+        static_entity_t static_entity;
+        entt::entity entity;
         archive(static_entity);
-        const void *value = storage.value(entt);
-        const entt::meta_any any = meta.from_void(value);
-        serialize_component<Archive, true>(archive, any);
+        archive(entity);
+        static_entities.create(entity, static_entity);
+    }
+
+    uint16_t storage_count;
+    archive(storage_count);
+    for (int i = 0; i < storage_count; ++i) {
+        entt::id_type id;
+        archive(id);
+        entt::meta_type type = entt::resolve(id);
+        uint32_t storage_size;
+        archive(storage_size);
+        for (int j = 0; j < storage_size; ++j) {
+            entt::meta_any value = type.construct();
+            if (!value) {
+                throw std::runtime_error("construction of component failed");
+            }
+            static_entity_t static_entity;
+            serialize_entity_component<Archive, false>(archive, static_entity, value);
+            any_change_applier_t::apply(reg, static_entities.get_entity(static_entity), value);
+        }
     }
 }
 
 template<typename Archive, traits_t traits = traits_t::NO>
 void serialize_registry(Archive &archive, entt::registry &reg) {
-    const auto &static_entities = reg.ctx().get<static_entities_t>();
+    auto &static_entities = reg.ctx().get<static_entities_t>();
+
+    auto entities = static_entities.get_entities();
+    archive(static_cast<uint32_t>(entities.size()));
+    for (const auto &[static_entity, entity] : entities) {
+        archive(static_entity);
+        archive(entity.entt);
+    }
 
     if constexpr (traits != traits_t::NO) {
         const uint16_t numSets = std::ranges::count_if(reg.storage(),

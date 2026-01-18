@@ -43,6 +43,8 @@ public:
     [[nodiscard]] static_entity_t get_static_entity(entt::entity entt) const;
 
     [[nodiscard]] entt::entity get_entity(static_entity_t static_entity) const;
+
+    std::map<static_entity_t, entity_container> &get_entities();
 };
 }
 
