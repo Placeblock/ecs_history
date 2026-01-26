@@ -15,7 +15,7 @@ namespace ecs_history::serialization {
 
 template<typename Archive>
 void serialize_storage_info(Archive &archive, entt::id_type &&type, size_t &&size) {
-    archive(static_cast<uint64_t>(type));
+    archive(type);
     archive(static_cast<uint32_t>(size));
 }
 
@@ -44,14 +44,17 @@ void serialize_storage(Archive &archive,
 template<typename Archive>
 void deserialize_registry(Archive &archive, entt::registry &reg) {
     auto &static_entities = reg.ctx().get<static_entities_t>();
+    auto &version_handler = reg.ctx().get<entity_version_handler_t>();
     uint32_t entities;
     archive(entities);
     for (int i = 0; i < entities; ++i) {
         static_entity_t static_entity;
-        entt::entity entity;
         archive(static_entity);
-        archive(entity);
+        const auto entity = reg.create();
         static_entities.create(entity, static_entity);
+        entity_version_t version;
+        archive(version);
+        version_handler.add_entity(static_entity, version);
     }
 
     uint16_t storage_count;
@@ -60,6 +63,10 @@ void deserialize_registry(Archive &archive, entt::registry &reg) {
         entt::id_type id;
         archive(id);
         entt::meta_type type = entt::resolve(id);
+        if (!type) {
+            spdlog::error("invalid component type {} while deserializing registry", id);
+            throw std::runtime_error("invalid component type while deserializing regisdtry");
+        }
         uint32_t storage_size;
         archive(storage_size);
         for (int j = 0; j < storage_size; ++j) {
@@ -77,12 +84,13 @@ void deserialize_registry(Archive &archive, entt::registry &reg) {
 template<typename Archive, traits_t traits = traits_t::NO>
 void serialize_registry(Archive &archive, entt::registry &reg) {
     auto &static_entities = reg.ctx().get<static_entities_t>();
+    auto &version_handler = reg.ctx().get<entity_version_handler_t>();
 
-    auto entities = static_entities.get_entities();
+    const auto entities = static_entities.get_entities();
     archive(static_cast<uint32_t>(entities.size()));
-    for (const auto &[static_entity, entity] : entities) {
+    for (const auto &[static_entity, version] : version_handler.versions) {
         archive(static_entity);
-        archive(entity.entt);
+        archive(version);
     }
 
     if constexpr (traits != traits_t::NO) {

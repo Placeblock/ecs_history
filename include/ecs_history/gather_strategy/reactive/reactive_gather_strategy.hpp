@@ -5,10 +5,10 @@
 #ifndef ECS_HISTORY_REACTIVE_GATHER_STRATEGY_HPP
 #define ECS_HISTORY_REACTIVE_GATHER_STRATEGY_HPP
 #include "monitor.hpp"
-#include "ecs_history/gather_strategy/gather_strategy.hpp"
+#include "ecs_history/gather_strategy/gather_strategy_t.hpp"
 
 namespace ecs_history {
-class reactive_gather_strategy final : public gather_strategy {
+class reactive_gather_strategy final : public gather_strategy_t {
     using reactive_entity_storage = entt::storage_type_t<entt::reactive, entt::entity>;
     using component_monitor_list_t = std::vector<std::shared_ptr<base_component_monitor_t> >;
 

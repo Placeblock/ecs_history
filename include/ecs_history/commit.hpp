@@ -10,7 +10,8 @@
 
 #include "ecs_history/change_set.hpp"
 #include "entity_version.hpp"
-#include "ecs_history/gather_strategy/gather_strategy.hpp"
+#include "ecs_history/gather_strategy/gather_strategy_t.hpp"
+#include <spdlog/fmt/bundled/format.h>
 
 namespace ecs_history {
 
@@ -19,6 +20,8 @@ struct commit_id {
     uint64_t part2;
 
     commit_id(uint64_t part1, uint64_t part2);
+
+    commit_id();
 
     bool operator==(const commit_id &other) const;
 
@@ -62,16 +65,26 @@ struct commit_t {
     commit_t(commit_t &&commit) = default;
 
     std::unique_ptr<commit_t> invert();
+
+    [[nodiscard]] size_t size() const;
 };
 
-std::unique_ptr<commit_t> create_commit(gather_strategy &gather_strategy,
+std::unique_ptr<commit_t> create_commit(gather_strategy_t &gather_strategy,
                                         entity_version_handler_t &version_handler);
 
 
 bool can_apply_commit(entt::registry &reg, const commit_t &commit);
 
-void apply_commit(entt::registry &reg, gather_strategy &gather_strategy, const commit_t &commit);
+void apply_commit(entt::registry &reg, gather_strategy_t &gather_strategy, const commit_t &commit);
 
 }
+
+template<>
+struct fmt::formatter<ecs_history::commit_id> : formatter<std::string> {
+    auto format(ecs_history::commit_id commit,
+                format_context &ctx) const -> decltype(ctx.out()) {
+        return format_to(ctx.out(), "{}{}", commit.part1, commit.part2);
+    }
+};
 
 #endif //ECS_HISTORY_COMMIT_HPP

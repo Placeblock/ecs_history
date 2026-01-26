@@ -4,8 +4,10 @@
 
 #ifndef ECS_HISTORY_STATIC_ENTITY_HPP
 #define ECS_HISTORY_STATIC_ENTITY_HPP
+#include <cmath>
 #include <cstdint>
 #include <map>
+#include <random>
 #include <entt/entity/storage.hpp>
 
 #ifndef STATIC_ENTITY_TYPE
@@ -14,6 +16,11 @@
 
 namespace ecs_history {
 using static_entity_t = STATIC_ENTITY_TYPE;
+
+inline uint64_t random_entity_start() {
+    static std::mt19937_64 rng{std::random_device{}()};
+    return (rng() & 0xFFFFULL) << 48;
+}
 
 class static_entities_t {
     struct static_entity_container_t {
@@ -30,8 +37,9 @@ class static_entities_t {
 
 public:
     static_entities_t() {
-        const auto entity_id_start = std::getenv("ENTITY_ID_START");
-        this->next = std::atol(entity_id_start);
+        //const auto entity_id_start = std::getenv("ENTITY_ID_START");
+        //this->next = std::atol(entity_id_start);
+        this->next = random_entity_start();
     }
 
     uint64_t create(entt::entity entt);

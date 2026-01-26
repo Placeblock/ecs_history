@@ -11,6 +11,9 @@ using namespace ecs_history;
 commit_id::commit_id(const uint64_t part1, const uint64_t part2) : part1{part1}, part2{part2} {
 }
 
+commit_id::commit_id() : part1(0), part2(0) {
+}
+
 bool commit_id::operator==(const commit_id &other) const {
     return part1 == other.part1 && part2 == other.part2;
 }
@@ -57,7 +60,17 @@ std::unique_ptr<commit_t> commit_t::invert() {
     return inverted_commit;
 }
 
-std::unique_ptr<commit_t> ecs_history::create_commit(gather_strategy &gather_strategy,
+size_t commit_t::size() const {
+    size_t size = 0;
+    size += this->created_entities.size() * (sizeof(static_entity_t) + sizeof(entity_version_t));
+    size += this->destroyed_entities.size() * (sizeof(static_entity_t) + sizeof(entity_version_t));
+    for (const auto &change_set : this->change_sets) {
+        size += change_set->size();
+    }
+    return size;
+}
+
+std::unique_ptr<commit_t> ecs_history::create_commit(gather_strategy_t &gather_strategy,
                                                      entity_version_handler_t &version_handler) {
     auto commit = std::make_unique<commit_t>();
     commit->change_sets = gather_strategy.get_change_sets();
@@ -95,7 +108,7 @@ bool ecs_history::can_apply_commit(entt::registry &reg, const commit_t &commit) 
 }
 
 void ecs_history::apply_commit(entt::registry &reg,
-                               gather_strategy &gather_strategy,
+                               gather_strategy_t &gather_strategy,
                                const commit_t &commit) {
     auto &version_handler = reg.ctx().get<entity_version_handler_t>();
     auto &static_entities = reg.ctx().get<static_entities_t>();

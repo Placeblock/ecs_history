@@ -10,7 +10,7 @@
 #include "ecs_history/change_set.hpp"
 
 namespace ecs_history {
-class gather_strategy {
+class gather_strategy_t {
 public:
     virtual std::vector<std::unique_ptr<base_change_set_t> > get_change_sets() = 0;
 
@@ -19,9 +19,10 @@ public:
     virtual std::vector<static_entity_t> get_destroyed_entities() = 0;
 
     virtual void disable() = 0;
+
     virtual void enable() = 0;
 
-    virtual ~gather_strategy() = default;
+    virtual ~gather_strategy_t() = default;
 };
 }
 

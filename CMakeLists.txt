@@ -37,7 +37,7 @@ add_library(ecs_history ${ECS_HISTORY_LIBRARY_TYPE}
         include/ecs_history/gather_strategy/reactive/monitor.hpp
         include/ecs_history/commit.hpp
         include/ecs_history/entity_version.hpp
-        include/ecs_history/gather_strategy/gather_strategy.hpp
+        include/ecs_history/gather_strategy/gather_strategy_t.hpp
         include/ecs_history/gather_strategy/reactive/reactive_gather_strategy.hpp
         include/ecs_history/serialization/component.hpp
         include/ecs_history/serialization/change.hpp
@@ -49,7 +49,8 @@ add_library(ecs_history ${ECS_HISTORY_LIBRARY_TYPE}
         src/serialization/component.cpp
         src/change_applier.cpp
         src/change_set.cpp
-        src/static_entity.cpp)
+        src/static_entity.cpp
+        include/ecs_history/history.hpp)
 target_include_directories(ecs_history PUBLIC include)
 target_link_libraries(ecs_history EnTT::EnTT cereal)
 

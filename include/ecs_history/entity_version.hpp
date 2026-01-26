@@ -18,9 +18,10 @@ namespace ecs_history {
 using entity_version_t = ENTITY_VERSION_TYPE;
 
 class entity_version_handler_t {
-    std::unordered_map<static_entity_t, entity_version_t> versions;
 
 public:
+    std::unordered_map<static_entity_t, entity_version_t> versions;
+
     [[nodiscard]] entity_version_t get_version(static_entity_t entity);
 
     void set_version(static_entity_t entity, entity_version_t version);

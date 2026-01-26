@@ -22,6 +22,8 @@ public:
 
     [[nodiscard]] virtual std::unique_ptr<base_change_set_t> invert() const = 0;
 
+    [[nodiscard]] virtual size_t size() const = 0;
+
     [[nodiscard]] virtual size_t count() const = 0;
 
     virtual ~base_change_set_t() = default;
@@ -36,7 +38,7 @@ public:
         : base_change_set_t(id) {
     }
 
-    [[nodiscard]] size_t size() const {
+    [[nodiscard]] size_t size() const override {
         size_t size = 0;
         for (const auto &change : this->changes) {
             size += change->size();
