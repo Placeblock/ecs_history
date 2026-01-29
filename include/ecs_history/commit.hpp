@@ -11,7 +11,7 @@
 #include "ecs_history/change_set.hpp"
 #include "entity_version.hpp"
 #include "ecs_history/gather_strategy/gather_strategy_t.hpp"
-#include <spdlog/fmt/bundled/format.h>
+#include <fmt/base.h>
 
 namespace ecs_history {
 
