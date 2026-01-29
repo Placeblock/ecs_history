@@ -33,5 +33,8 @@ void entity_version_handler_t::remove_entity(const static_entity_t entity) {
 
 void entity_version_handler_t::
 add_entity(const static_entity_t entity, const entity_version_t version) {
+    if (this->versions.contains(entity)) {
+        throw std::runtime_error("entity already exists in version handler");
+    }
     this->versions[entity] = version;
 }

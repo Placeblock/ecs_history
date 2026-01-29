@@ -14,7 +14,7 @@ uint64_t static_entities_t::create(const entt::entity entt) {
 }
 
 void static_entities_t::create(const entt::entity entt, static_entity_t static_entity) {
-    if (this->static_entities.contains(entt)) {
+    if (this->entities.contains(static_entity)) {
         throw std::runtime_error("static entity already exists");
     }
     this->static_entities.emplace(entt, static_entity);
