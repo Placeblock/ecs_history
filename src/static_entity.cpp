@@ -45,7 +45,7 @@ entt::entity static_entities_t::get_entity(const static_entity_t static_entity) 
     return this->entities.at(static_entity).entt;
 }
 
-std::map<static_entity_t, static_entities_t::entity_container> &static_entities_t::
+std::unordered_map<static_entity_t, static_entities_t::entity_container> &static_entities_t::
 get_entities() {
     return this->entities;
 }

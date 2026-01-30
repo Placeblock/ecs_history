@@ -2,7 +2,7 @@
 // Created by felix on 12/24/25.
 //
 
-#include "../include/ecs_history/commit.hpp"
+#include "ecs_history/commit.hpp"
 
 #include "ecs_history/change_applier.hpp"
 

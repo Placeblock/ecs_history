@@ -32,7 +32,7 @@ class static_entities_t {
     };
 
     entt::storage<static_entity_container_t> static_entities;
-    std::map<static_entity_t, entity_container> entities;
+    std::unordered_map<static_entity_t, entity_container> entities;
     static_entity_t next;
 
 public:
@@ -52,7 +52,7 @@ public:
 
     [[nodiscard]] entt::entity get_entity(static_entity_t static_entity) const;
 
-    std::map<static_entity_t, entity_container> &get_entities();
+    std::unordered_map<static_entity_t, entity_container> &get_entities();
 };
 }
 

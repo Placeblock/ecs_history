@@ -7,14 +7,15 @@
 
 #include <vector>
 #include <random>
+#include <spdlog/spdlog.h>
+#include <spdlog/fmt/ostr.h>
+#include <spdlog/fmt/compile.h>
 
 #include "ecs_history/change_set.hpp"
 #include "entity_version.hpp"
-#include "ecs_history/gather_strategy/gather_strategy_t.hpp"
-#include <fmt/base.h>
+#include "ecs_history/gather_strategy/gather_strategy.hpp"
 
 namespace ecs_history {
-
 struct commit_id {
     uint64_t part1;
     uint64_t part2;
@@ -76,14 +77,13 @@ std::unique_ptr<commit_t> create_commit(gather_strategy_t &gather_strategy,
 bool can_apply_commit(entt::registry &reg, const commit_t &commit);
 
 void apply_commit(entt::registry &reg, gather_strategy_t &gather_strategy, const commit_t &commit);
-
 }
 
 template<>
-struct fmt::formatter<ecs_history::commit_id> : formatter<std::string> {
-    auto format(ecs_history::commit_id commit,
+struct fmt::formatter<ecs_history::commit_id> : fmt::formatter<std::string> {
+    auto format(const ecs_history::commit_id &commit,
                 format_context &ctx) const -> decltype(ctx.out()) {
-        return format_to(ctx.out(), "{}{}", commit.part1, commit.part2);
+        return fmt::format_to(ctx.out(), "{}{}", commit.part1, commit.part2);
     }
 };
 
