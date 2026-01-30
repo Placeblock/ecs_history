@@ -18,13 +18,13 @@ namespace ecs_history::serialization {
         archive(static_cast<uint32_t>(size));
     }
 
-    template<typename Archive, bool Serialize>
-    void serialize_entity_component(Archive &archive,
-                                    static_entity_t &static_entity,
-                                    entt::meta_any &value) {
-        archive(static_entity);
-        serialize_component<Archive, Serialize>(archive, value);
-    }
+template<typename Archive, bool Serialize>
+void serialize_entity_component(Archive &archive,
+                                static_entity_t &static_entity,
+                                entt::meta_any value) {
+    archive(static_entity);
+    serialize_component<Archive, Serialize>(archive, value.as_ref());
+}
 
     template<typename Archive>
     void serialize_storage(Archive &archive,
@@ -56,28 +56,29 @@ namespace ecs_history::serialization {
             version_handler.add_entity(static_entity, version);
         }
 
-        uint16_t storage_count;
-        archive(storage_count);
-        for (int i = 0; i < storage_count; ++i) {
-            entt::id_type id;
-            archive(id);
-            entt::meta_type type = entt::resolve(id);
-            if (!type) {
-                throw std::runtime_error("invalid component type while deserializing regisdtry");
+    uint16_t storage_count;
+    archive(storage_count);
+    for (int i = 0; i < storage_count; ++i) {
+        entt::id_type id;
+        archive(id);
+        entt::meta_type type = entt::resolve(id);
+        if (!type) {
+            spdlog::error("invalid component type {} while deserializing registry", id);
+            throw std::runtime_error("invalid component type while deserializing regisdtry");
+        }
+        uint32_t storage_size;
+        archive(storage_size);
+        for (int j = 0; j < storage_size; ++j) {
+            entt::meta_any value = type.construct();
+            if (!value) {
+                throw std::runtime_error("construction of component failed");
             }
-            uint32_t storage_size;
-            archive(storage_size);
-            for (int j = 0; j < storage_size; ++j) {
-                entt::meta_any value = type.construct();
-                if (!value) {
-                    throw std::runtime_error("construction of component failed");
-                }
-                static_entity_t static_entity;
-                serialize_entity_component<Archive, false>(archive, static_entity, value);
-                any_change_applier_t::apply(reg, static_entities.get_entity(static_entity), value);
-            }
+            static_entity_t static_entity;
+            serialize_entity_component<Archive, false>(archive, static_entity, value.as_ref());
+            any_change_applier_t::apply(reg, static_entities.get_entity(static_entity), value);
         }
     }
+}
 
     template<typename Archive, traits_t traits = traits_t::NO>
     void serialize_registry(Archive &archive, entt::registry &reg) {
