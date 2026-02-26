@@ -30,7 +30,7 @@ any_change_applier_t(entt::registry &reg, static_entities_t &static_entities)
 
 void any_change_applier_t::apply_construct(const static_entity_t static_entity,
                                            entt::meta_any &value) {
-    const auto entt = this->static_entities.get_entity(static_entity);
+    const auto entt = this->static_entities.create_entity_or_inc_ref(static_entity);
     apply(reg, entt, value);
 }
 
@@ -46,4 +46,5 @@ void any_change_applier_t::apply_destruct(const static_entity_t static_entity,
     const auto entt = this->static_entities.get_entity(static_entity);
     const auto storage = this->reg.storage(old_value.type().id());
     storage->remove(entt);
+    this->static_entities.decrease_ref(static_entity);
 }

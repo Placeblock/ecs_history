@@ -30,13 +30,13 @@ class static_entities_t {
         uint16_t ref_count;
     };
 
-    entt::storage<entt::entity> entity_generator;
+    entt::registry &registry;
     entt::basic_storage<entity_container, static_entity_t> entities;
     entt::storage<static_entity_container_t> static_entities;
     static_entity_t next;
 
 public:
-    explicit static_entities_t() {
+    explicit static_entities_t(entt::registry &registry) : registry(registry) {
         this->next = random_entity_start();
     }
 

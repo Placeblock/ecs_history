@@ -59,16 +59,9 @@ public:
 
     void on_construct(const entt::entity entity,
                       const T &value) {
-        static_entity_t static_entity = this->entities.get_static_entity(entity);
+        static_entity_t static_entity = this->entities.increase_ref(entity);
         this->changes.emplace_back(
             std::make_unique<construct_change_t<T> >(static_entity, value));
-    }
-
-    void on_destruct(const entt::entity entity,
-                     const T &old_value) {
-        static_entity_t static_entity = this->entities.get_static_entity(entity);
-        this->changes.emplace_back(
-            std::make_unique<destruct_change_t<T> >(static_entity, old_value));
     }
 
     void on_update(const entt::entity entity,
@@ -79,6 +72,14 @@ public:
             static_entity,
             old_value,
             new_value));
+    }
+
+    void on_destruct(const entt::entity entity,
+                     const T &old_value) {
+        static_entity_t static_entity = this->entities.get_static_entity(entity);
+        this->entities.decrease_ref(static_entity);
+        this->changes.emplace_back(
+            std::make_unique<destruct_change_t<T> >(static_entity, old_value));
     }
 
     void disable() override {

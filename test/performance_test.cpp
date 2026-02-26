@@ -60,7 +60,7 @@ int main() {
         .func<serialize<cereal::PortableBinaryInputArchive> >("deserialize"_hs);
 
     entt::registry reg;
-    auto entities = ecs_history::static_entities_t{};
+    auto entities = ecs_history::static_entities_t{reg};
     auto version_handler = ecs_history::entity_version_handler_t{};
     entt::storage_type_t<bounding_box_t> &storage = reg.storage<bounding_box_t>();
     std::unique_ptr<ecs_history::base_storage_monitor_t> monitor = std::make_unique<
@@ -72,7 +72,7 @@ int main() {
     auto history = std::make_unique<ecs_history::history_t>(reg, monitors);
 
     entt::registry reg2;
-    reg2.ctx().emplace<ecs_history::static_entities_t>();
+    reg2.ctx().emplace<ecs_history::static_entities_t>(reg2);
     reg2.ctx().emplace<ecs_history::entity_version_handler_t>();
 
     const spdlog::stopwatch create_entities_sw;
