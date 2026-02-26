@@ -24,12 +24,12 @@ entt::entity static_entities_t::create_entity_or_inc_ref(const static_entity_t s
     return entity;
 }
 
-entt::entity static_entities_t::create() {
+static_entity_t static_entities_t::create() {
     static_entity_t static_entity = this->next++;
     entt::entity entity = this->entity_generator.generate();
     this->static_entities.emplace(entity, static_entity);
     this->entities.emplace(static_entity, entity, static_cast<uint16_t>(1));
-    return entity;
+    return static_entity;
 }
 
 entt::entity static_entities_t::decrease_ref(const static_entity_t static_entity) {

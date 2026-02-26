@@ -44,7 +44,7 @@ public:
 
     entt::entity create_entity_or_inc_ref(static_entity_t static_entity);
 
-    entt::entity create();
+    static_entity_t create();
 
     entt::entity decrease_ref(static_entity_t static_entity);
 

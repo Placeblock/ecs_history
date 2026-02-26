@@ -75,7 +75,8 @@ bool can_apply_commit(entt::registry &reg, const commit_t &commit);
 
 void apply_commit(entt::registry &reg,
                   const std::vector<std::unique_ptr<base_storage_monitor_t> > &monitors,
-                  const commit_t &commit);
+                  const
+                  commit_t &commit);
 }
 
 template<>

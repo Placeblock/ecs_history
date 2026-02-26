@@ -49,7 +49,6 @@ void deserialize_registry(Archive &archive, entt::registry &reg) {
     for (int i = 0; i < entities; ++i) {
         static_entity_t static_entity;
         archive(static_entity);
-        static_entities.create_entity_or_inc_ref(static_entity);
         entity_version_t version;
         archive(version);
         version_handler.add_entity(static_entity, version);
@@ -79,7 +78,7 @@ void deserialize_registry(Archive &archive, entt::registry &reg) {
     }
 }
 
-template<typename Archive, traits_t traits = traits_t::NO>
+template<typename Archive>
 void serialize_registry(Archive &archive, entt::registry &reg) {
     auto &static_entities = reg.ctx().get<static_entities_t>();
     auto &version_handler = reg.ctx().get<entity_version_handler_t>();
@@ -90,30 +89,12 @@ void serialize_registry(Archive &archive, entt::registry &reg) {
         archive(version);
     }
 
-    if constexpr (traits != traits_t::NO) {
-        const uint16_t numSets = std::ranges::count_if(reg.storage(),
-                                                       [](const auto &p) {
-                                                           const entt::meta_type type =
-                                                               entt::resolve(p.first);
-                                                           const auto type_traits = type.traits<
-                                                               traits_t>();
-                                                           return !!(type_traits & traits);
-                                                       });
-        archive(numSets);
-    } else {
-        uint16_t storages = std::distance(reg.storage().begin(), reg.storage().end());
-        archive(storages);
-    }
+    uint16_t storages = std::distance(reg.storage().begin(), reg.storage().end());
+    archive(storages);
 
     for (auto [id, storage] : reg.storage()) {
-        const auto meta = entt::resolve(id);
-        if (!meta) {
+        if (const auto meta = entt::resolve(id); !meta) {
             continue;
-        }
-        if constexpr (traits != traits_t::NO) {
-            if (!(meta.traits<traits_t>() & traits)) {
-                continue;
-            }
         }
         serialize_storage(archive, storage, static_entities);
     }

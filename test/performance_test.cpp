@@ -44,15 +44,20 @@ void emplace(entt::registry &registry, const entt::entity entt, const T &value) 
     registry.emplace_or_replace<T>(entt, value);
 }
 
-int main() {
-    int amount = 10;
+template<typename Archive>
+void serialize(Archive &archive, bounding_box_t &box) {
+    archive(box.pos_size.x, box.pos_size.y, box.pos_size.z, box.pos_size.w);
+}
 
-    ecs_history::serialization::initialize_component_meta_types();
+int main() {
+    int amount = 1000000;
+
     entt::meta_factory<bounding_box_t>{}
         .func<ecs_history::serialization::deserialize_change_set<
             cereal::PortableBinaryInputArchive, bounding_box_t> >("deserialize_change_set"_hs)
         .func<emplace<bounding_box_t> >("emplace"_hs)
-        .data<&bounding_box_t::pos_size, entt::as_ref_t>("pos_size"_hs);
+        .func<serialize<cereal::PortableBinaryOutputArchive> >("serialize"_hs)
+        .func<serialize<cereal::PortableBinaryInputArchive> >("deserialize"_hs);
 
     entt::registry reg;
     auto entities = ecs_history::static_entities_t{};
@@ -67,14 +72,13 @@ int main() {
     auto history = std::make_unique<ecs_history::history_t>(reg, monitors);
 
     entt::registry reg2;
-    auto entities2 = ecs_history::static_entities_t{};
-    auto version_handler2 = ecs_history::entity_version_handler_t{};
+    reg2.ctx().emplace<ecs_history::static_entities_t>();
+    reg2.ctx().emplace<ecs_history::entity_version_handler_t>();
 
     const spdlog::stopwatch create_entities_sw;
     for (int i = 0; i < amount; ++i) {
-        entt::entity entity = entities.create_entity_or_inc_ref(i);
-        version_handler.add_entity(i, 0);
-        std::cout << static_cast<uint64_t>(entity) << std::endl;
+        ecs_history::static_entity_t static_entity = entities.create();
+        version_handler.add_entity(static_entity, 0);
     }
     spdlog::info("Creating 1.000.000 Entities: {}",
                  duration_cast<milliseconds>(create_entities_sw.elapsed()));

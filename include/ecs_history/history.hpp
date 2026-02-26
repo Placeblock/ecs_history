@@ -103,7 +103,9 @@ public:
         }
         const auto new_base_id = commits.back().id;
         this->commits.push_back({new_base_id, id, std::move(commit)});
-        ecs_history::apply_commit(this->reg, this->monitors, *this->commits.back().commit);
+        ecs_history::apply_commit(this->reg,
+                                  this->monitors,
+                                  *this->commits.back().commit);
         return new_base_id;
     }
 

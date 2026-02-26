@@ -54,14 +54,12 @@ add_library(ecs_history ${ECS_HISTORY_LIBRARY_TYPE}
         include/ecs_history/storage_monitor.hpp
         include/ecs_history/change_set.hpp
         include/ecs_history/static_entity.hpp
-        include/ecs_history/commit.hpp
         include/ecs_history/entity_version.hpp
         include/ecs_history/serialization/component.hpp
         include/ecs_history/serialization/change.hpp
         include/ecs_history/serialization/serialization.hpp
         src/commit.cpp
         src/entity_version.cpp
-        src/serialization/component.cpp
         src/change_applier.cpp
         src/change_set.cpp
         src/static_entity.cpp
