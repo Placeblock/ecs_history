@@ -13,7 +13,7 @@
 
 #include "ecs_history/change_set.hpp"
 #include "entity_version.hpp"
-#include "ecs_history/gather_strategy/gather_strategy.hpp"
+#include "storage_monitor.hpp"
 
 namespace ecs_history {
 struct commit_id {
@@ -48,16 +48,12 @@ public:
 struct commit_t {
     bool undo = false;
     std::unordered_map<static_entity_t, entity_version_t> entity_versions;
-    std::vector<static_entity_t> created_entities;
     std::vector<std::unique_ptr<base_change_set_t> > change_sets;
-    std::vector<static_entity_t> destroyed_entities;
 
     commit_t() = default;
 
     commit_t(std::unordered_map<static_entity_t, entity_version_t> entity_versions,
-             std::vector<static_entity_t> created_entities,
-             std::vector<std::unique_ptr<base_change_set_t> > change_sets,
-             std::vector<static_entity_t> destroyed_entities);
+             std::vector<std::unique_ptr<base_change_set_t> > change_sets);
 
     commit_t(commit_t &commit) = delete;
 
@@ -70,13 +66,16 @@ struct commit_t {
     [[nodiscard]] size_t size() const;
 };
 
-std::unique_ptr<commit_t> create_commit(gather_strategy_t &gather_strategy,
-                                        entity_version_handler_t &version_handler);
+std::unique_ptr<commit_t> create_commit(
+    std::vector<std::unique_ptr<base_storage_monitor_t> > &monitors,
+    entity_version_handler_t &version_handler);
 
 
 bool can_apply_commit(entt::registry &reg, const commit_t &commit);
 
-void apply_commit(entt::registry &reg, gather_strategy_t &gather_strategy, const commit_t &commit);
+void apply_commit(entt::registry &reg,
+                  const std::vector<std::unique_ptr<base_storage_monitor_t> > &monitors,
+                  const commit_t &commit);
 }
 
 template<>

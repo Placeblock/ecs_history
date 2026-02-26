@@ -8,6 +8,7 @@
 #include <entt/entity/registry.hpp>
 
 #include "change.hpp"
+#include <entt/meta/meta.hpp>
 
 using namespace entt::literals;
 
@@ -24,7 +25,7 @@ public:
 
     void apply(const construct_change_t<T> &c) override {
         const static_entity_t static_entity = c.static_entity;
-        const entt::entity entt = static_entities.get_entity(static_entity);
+        const entt::entity entt = static_entities.create_entity_or_inc_ref(static_entity);
         reg.emplace<T>(entt, c.value);
     }
 
@@ -36,7 +37,7 @@ public:
 
     void apply(const destruct_change_t<T> &c) override {
         const static_entity_t static_entity = c.static_entity;
-        const entt::entity entt = static_entities.get_entity(static_entity);
+        const entt::entity entt = static_entities.decrease_ref(static_entity);
         reg.remove<T>(entt);
     }
 };

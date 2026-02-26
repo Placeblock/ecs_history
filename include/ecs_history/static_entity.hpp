@@ -4,9 +4,7 @@
 
 #ifndef ECS_HISTORY_STATIC_ENTITY_HPP
 #define ECS_HISTORY_STATIC_ENTITY_HPP
-#include <cmath>
 #include <cstdint>
-#include <map>
 #include <random>
 #include <entt/entity/storage.hpp>
 
@@ -29,30 +27,30 @@ class static_entities_t {
 
     struct entity_container {
         entt::entity entt;
+        uint16_t ref_count;
     };
 
+    entt::storage<entt::entity> entity_generator;
+    entt::basic_storage<entity_container, static_entity_t> entities;
     entt::storage<static_entity_container_t> static_entities;
-    std::unordered_map<static_entity_t, entity_container> entities;
     static_entity_t next;
 
 public:
-    static_entities_t() {
-        //const auto entity_id_start = std::getenv("ENTITY_ID_START");
-        //this->next = std::atol(entity_id_start);
+    explicit static_entities_t() {
         this->next = random_entity_start();
     }
 
-    uint64_t create(entt::entity entt);
+    [[nodiscard]] static_entity_t increase_ref(entt::entity entity);
 
-    void create(entt::entity entt, static_entity_t static_entity);
+    entt::entity create_entity_or_inc_ref(static_entity_t static_entity);
 
-    entt::entity remove(static_entity_t static_entity);
+    entt::entity create();
+
+    entt::entity decrease_ref(static_entity_t static_entity);
 
     [[nodiscard]] static_entity_t get_static_entity(entt::entity entt) const;
 
     [[nodiscard]] entt::entity get_entity(static_entity_t static_entity) const;
-
-    std::unordered_map<static_entity_t, entity_container> &get_entities();
 };
 }
 

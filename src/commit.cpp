@@ -31,19 +31,13 @@ commit_id commit_id_generator_t::next() {
 
 commit_t::commit_t(
     std::unordered_map<static_entity_t, entity_version_t> entity_versions,
-    std::vector<static_entity_t> created_entities,
-    std::vector<std::unique_ptr<base_change_set_t> > change_sets,
-    std::vector<static_entity_t> destroyed_entities)
+    std::vector<std::unique_ptr<base_change_set_t> > change_sets)
     : entity_versions(std::move(entity_versions)),
-      created_entities(std::move(created_entities)),
-      change_sets(std::move(change_sets)),
-      destroyed_entities(std::move(destroyed_entities)) {
+      change_sets(std::move(change_sets)) {
 }
 
 std::unique_ptr<commit_t> commit_t::invert() {
     auto inverted_commit = std::make_unique<commit_t>();
-    inverted_commit->created_entities = this->destroyed_entities;
-    inverted_commit->destroyed_entities = this->created_entities;
     for (const auto &base_change_set : this->change_sets) {
         inverted_commit->change_sets.push_back(base_change_set->invert());
     }
@@ -62,20 +56,19 @@ std::unique_ptr<commit_t> commit_t::invert() {
 
 size_t commit_t::size() const {
     size_t size = 0;
-    size += this->created_entities.size() * (sizeof(static_entity_t) + sizeof(entity_version_t));
-    size += this->destroyed_entities.size() * (sizeof(static_entity_t) + sizeof(entity_version_t));
     for (const auto &change_set : this->change_sets) {
         size += change_set->size();
     }
     return size;
 }
 
-std::unique_ptr<commit_t> ecs_history::create_commit(gather_strategy_t &gather_strategy,
-                                                     entity_version_handler_t &version_handler) {
+std::unique_ptr<commit_t> ecs_history::create_commit(
+    std::vector<std::unique_ptr<base_storage_monitor_t> > &monitors,
+    entity_version_handler_t &version_handler) {
     auto commit = std::make_unique<commit_t>();
-    commit->change_sets = gather_strategy.get_change_sets();
-    commit->created_entities = gather_strategy.get_created_entities();
-    commit->destroyed_entities = gather_strategy.get_destroyed_entities();
+    for (const auto &monitor : monitors) {
+        commit->change_sets.push_back(monitor->commit());
+    }
 
     std::unordered_set<static_entity_t> commit_entities;
     for (const auto &change_set : commit->change_sets) {
@@ -83,12 +76,6 @@ std::unique_ptr<commit_t> ecs_history::create_commit(gather_strategy_t &gather_s
             [&commit_entities](const static_entity_t &static_entity) {
                 commit_entities.emplace(static_entity);
             });
-    }
-    for (const static_entity_t &static_entity : commit->created_entities) {
-        commit_entities.emplace(static_entity);
-    }
-    for (const static_entity_t &static_entity : commit->destroyed_entities) {
-        commit_entities.emplace(static_entity);
     }
     for (const static_entity_t &static_entity : commit_entities) {
         commit->entity_versions[static_entity] = version_handler.increment_version(
@@ -108,23 +95,18 @@ bool ecs_history::can_apply_commit(entt::registry &reg, const commit_t &commit) 
 }
 
 void ecs_history::apply_commit(entt::registry &reg,
-                               gather_strategy_t &gather_strategy,
+                               const std::vector<std::unique_ptr<base_storage_monitor_t> > &
+                               monitors,
                                const commit_t &commit) {
     auto &version_handler = reg.ctx().get<entity_version_handler_t>();
     auto &static_entities = reg.ctx().get<static_entities_t>();
-    gather_strategy.disable();
+    for (auto &monitor : monitors) {
+        monitor->disable();
+    }
 
-    for (const static_entity_t &created_entity : commit.created_entities) {
-        const entt::entity entt = reg.create();
-        static_entities.create(entt, created_entity);
-    }
     any_change_applier_t applier{reg, static_entities};
-    for (const auto &change : commit.change_sets) {
-        change->supply(applier);
-    }
-    for (const static_entity_t &removed_entity : commit.destroyed_entities) {
-        const auto entt = static_entities.remove(removed_entity);
-        reg.destroy(entt);
+    for (const auto &change_set : commit.change_sets) {
+        change_set->supply(applier);
     }
     for (const auto &[entity, version] : commit.entity_versions) {
         commit.undo
@@ -132,5 +114,7 @@ void ecs_history::apply_commit(entt::registry &reg,
             : version_handler.set_version(entity, version + 1);
     }
 
-    gather_strategy.enable();
+    for (auto &monitor : monitors) {
+        monitor->enable();
+    }
 }

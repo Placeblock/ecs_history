@@ -6,28 +6,40 @@
 
 using namespace ecs_history;
 
-uint64_t static_entities_t::create(const entt::entity entt) {
-    static_entity_t static_entity = this->next++;
-    this->static_entities.emplace(entt, static_entity);
-    this->entities[static_entity] = {entt};
+static_entity_t static_entities_t::increase_ref(const entt::entity entity) {
+    const static_entity_t static_entity = this->static_entities.get(entity).id;
+    this->entities.get(static_entity).ref_count++;
     return static_entity;
 }
 
-void static_entities_t::create(const entt::entity entt, static_entity_t static_entity) {
+entt::entity static_entities_t::create_entity_or_inc_ref(const static_entity_t static_entity) {
     if (this->entities.contains(static_entity)) {
-        throw std::runtime_error("static entity already exists");
+        auto &[entt, ref_count] = this->entities.get(static_entity);
+        ref_count++;
+        return entt;
     }
-    this->static_entities.emplace(entt, static_entity);
-    this->entities[static_entity] = {entt};
+    const auto entity = this->entity_generator.generate();
+    this->static_entities.emplace(entity, static_entity);
+    this->entities.emplace(static_entity, entity, static_cast<uint16_t>(1));
+    return entity;
 }
 
-entt::entity static_entities_t::remove(const static_entity_t static_entity) {
-    if (!this->entities.contains(static_entity)) {
-        throw std::runtime_error("static entity does not exist exists");
+entt::entity static_entities_t::create() {
+    static_entity_t static_entity = this->next++;
+    entt::entity entity = this->entity_generator.generate();
+    this->static_entities.emplace(entity, static_entity);
+    this->entities.emplace(static_entity, entity, static_cast<uint16_t>(1));
+    return entity;
+}
+
+entt::entity static_entities_t::decrease_ref(const static_entity_t static_entity) {
+    auto &[entt, ref_count] = this->entities.get(static_entity);
+    ref_count--;
+    if (ref_count == 0) {
+        this->entity_generator.erase(entt);
+        this->entities.erase(static_entity);
+        this->static_entities.erase(entt);
     }
-    const entt::entity entt = this->entities.at(static_entity).entt;
-    this->entities.erase(static_entity);
-    this->static_entities.erase(entt);
     return entt;
 }
 
@@ -42,10 +54,5 @@ entt::entity static_entities_t::get_entity(const static_entity_t static_entity) 
     if (!this->entities.contains(static_entity)) {
         throw std::runtime_error("static entity does not exist");
     }
-    return this->entities.at(static_entity).entt;
-}
-
-std::unordered_map<static_entity_t, static_entities_t::entity_container> &static_entities_t::
-get_entities() {
-    return this->entities;
+    return this->entities.get(static_entity).entt;
 }

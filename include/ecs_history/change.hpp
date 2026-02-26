@@ -4,9 +4,9 @@
 
 #ifndef ECS_HISTORY_CHANGE_H
 #define ECS_HISTORY_CHANGE_H
-#include <entt/meta/meta.hpp>
 
 #include "static_entity.hpp"
+#include "entt/meta/fwd.hpp"
 
 namespace ecs_history {
 template<typename T>

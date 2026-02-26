@@ -38,6 +38,11 @@ public:
         : base_change_set_t(id) {
     }
 
+    explicit change_set_t(std::vector<std::unique_ptr<change_t<T> > > &changes,
+                          const entt::id_type id = entt::type_hash<T>::value())
+        : base_change_set_t(id), changes(std::move(changes)) {
+    }
+
     [[nodiscard]] size_t size() const override {
         size_t size = 0;
         for (const auto &change : this->changes) {

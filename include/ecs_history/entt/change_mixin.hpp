@@ -16,17 +16,14 @@ class change_mixin_t : public Type {
 
     using basic_registry_type = basic_registry<typename owner_type::entity_type, typename
                                                owner_type::allocator_type>;
-    using construction_type = sigh<void(owner_type &,
-                                        typename underlying_type::entity_type,
+    using construction_type = sigh<void(typename underlying_type::entity_type,
                                         const typename underlying_type::value_type &value), typename
                                    underlying_type::allocator_type>;
-    using update_type = sigh<void(owner_type &,
-                                  typename underlying_type::entity_type,
+    using update_type = sigh<void(typename underlying_type::entity_type,
                                   const typename underlying_type::value_type &old_value,
                                   const typename underlying_type::value_type &new_value), typename
                              underlying_type::allocator_type>;
-    using destruction_type = sigh<void(owner_type &,
-                                       typename underlying_type::entity_type,
+    using destruction_type = sigh<void(typename underlying_type::entity_type,
                                        const typename underlying_type::value_type &old_value),
                                   typename
                                   underlying_type::allocator_type>;
@@ -47,7 +44,7 @@ private:
             for (; first != last; ++first) {
                 const auto entt = *first;
                 const auto &old_value = underlying_type::get(entt);
-                destruction.publish(reg, entt, old_value);
+                destruction.publish(entt, old_value);
                 const auto it = underlying_type::find(entt);
                 underlying_type::pop(it, it + 1u);
             }
@@ -62,17 +59,17 @@ private:
                      pos) {
                     const auto &entt = underlying_type::base_type::operator[](pos);
                     const auto &old_value = this->get(entt);
-                    destruction.publish(reg, entt, old_value);
+                    destruction.publish(entt, old_value);
                 }
             } else {
                 for (auto entt : static_cast<underlying_type::base_type &>(*this)) {
                     const auto &old_value = this->get(entt);
                     if constexpr (underlying_type::storage_policy == deletion_policy::in_place) {
                         if (entt != tombstone) {
-                            destruction.publish(reg, entt, old_value);
+                            destruction.publish(entt, old_value);
                         }
                     } else {
-                        destruction.publish(reg, entt, old_value);
+                        destruction.publish(entt, old_value);
                     }
                 }
             }
@@ -88,7 +85,7 @@ private:
 
         if (auto &reg = owner_or_assert(); it != underlying_type::base_type::end()) {
             const auto &comp_value = this->get(entt);
-            construction.publish(reg, *it, comp_value);
+            construction.publish(*it, comp_value);
         }
 
         return it;
@@ -269,7 +266,8 @@ public:
      */
     auto generate() {
         const auto entt = underlying_type::generate();
-        construction.publish(owner_or_assert(), entt);
+        const auto &value = this->get(entt);
+        construction.publish(entt, value);
         return entt;
     }
 
@@ -281,7 +279,7 @@ public:
     entity_type generate(const entity_type hint) {
         const auto entt = underlying_type::generate(hint);
         const auto &value = this->get(entt);
-        construction.publish(owner_or_assert(), entt, value);
+        construction.publish(entt, value);
         return entt;
     }
 
@@ -298,7 +296,7 @@ public:
         if (auto &reg = owner_or_assert(); !construction.empty()) {
             for (; first != last; ++first) {
                 const auto &value = this->get(*first);
-                construction.publish(reg, *first, value);
+                construction.publish(*first, value);
             }
         }
     }
@@ -313,7 +311,7 @@ public:
     template<typename... Args>
     decltype(auto) emplace(const entity_type entt, Args &&... args) {
         const auto &value = underlying_type::emplace(entt, std::forward<Args>(args)...);
-        construction.publish(owner_or_assert(), entt, value);
+        construction.publish(entt, value);
         return value;
     }
 
@@ -329,7 +327,7 @@ public:
         const auto old_value = this->get(entt);
         underlying_type::patch(entt, std::forward<Func>(func)...);
         const auto new_value = this->get(entt);
-        update.publish(owner_or_assert(), entt, old_value, new_value);
+        update.publish(entt, old_value, new_value);
         return new_value;
     }
 
@@ -352,7 +350,7 @@ public:
             for (const auto to = underlying_type::size(); from != to; ++from) {
                 const auto &entt = underlying_type::operator[](from);
                 const auto &value = this->get(entt);
-                construction.publish(reg, underlying_type::operator[](from));
+                construction.publish(underlying_type::operator[](from));
             }
         }
     }

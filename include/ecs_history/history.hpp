@@ -12,7 +12,7 @@ const commit_id FIRST_BASE_ID{0, 0};
 
 class history_t {
     entt::registry &reg;
-    gather_strategy_t &gather_strategy;
+    std::vector<std::unique_ptr<base_storage_monitor_t> > &monitors;
 
 public:
     struct history_commit_t {
@@ -23,9 +23,10 @@ public:
 
     std::list<history_commit_t> commits{};
 
-    explicit history_t(entt::registry &reg)
+    explicit history_t(entt::registry &reg,
+                       std::vector<std::unique_ptr<base_storage_monitor_t> > &monitors)
         : reg(reg),
-          gather_strategy(*reg.ctx().get<std::shared_ptr<gather_strategy_t> >()) {
+          monitors(monitors) {
     }
 
     void apply_commit(const commit_id base_id,
@@ -46,7 +47,7 @@ public:
         if (const auto it = rit.base(); it == this->commits.end()) {
             // The new commit's base_id is the last commit's id -> just insert
             spdlog::debug("commit is recent. applying");
-            ecs_history::apply_commit(this->reg, this->gather_strategy, *commit);
+            ecs_history::apply_commit(this->reg, this->monitors, *commit);
             this->commits.emplace_back(base_id, id, std::move(commit));
         } else {
             const auto base_it = std::prev(it); // The commit with the provided base_id
@@ -55,7 +56,7 @@ public:
             for (auto rollback_it = --this->commits.end(); rollback_it != base_it; --rollback_it) {
                 spdlog::debug("rolling back {}{}", rollback_it->id.part1, rollback_it->id.part2);
                 ecs_history::apply_commit(this->reg,
-                                          this->gather_strategy,
+                                          this->monitors,
                                           *rollback_it->commit->invert());
             }
             // Insert the new commit
@@ -63,7 +64,7 @@ public:
                 throw std::runtime_error("Failed to apply commit received from parent");
             }
             spdlog::debug("applying commit");
-            ecs_history::apply_commit(this->reg, this->gather_strategy, *commit);
+            ecs_history::apply_commit(this->reg, this->monitors, *commit);
             auto inserted_it = this->commits.insert(it, {base_id, id, std::move(commit)});
             // Try to reapply rolledback commits
             auto applyagain_it = ++inserted_it;
@@ -76,7 +77,7 @@ public:
                                   applyagain_it->id.part1,
                                   applyagain_it->id.part2);
                     ecs_history::apply_commit(this->reg,
-                                              this->gather_strategy,
+                                              this->monitors,
                                               *applyagain_it->commit);
                 } else {
                     break;
@@ -96,13 +97,13 @@ public:
         if (this->commits.empty()) {
             this->commits.push_back({FIRST_BASE_ID, id, std::move(commit)});
             ecs_history::apply_commit(this->reg,
-                                      this->gather_strategy,
+                                      this->monitors,
                                       *this->commits.back().commit);
             return {0, 0};
         }
         const auto new_base_id = commits.back().id;
         this->commits.push_back({new_base_id, id, std::move(commit)});
-        ecs_history::apply_commit(this->reg, this->gather_strategy, *this->commits.back().commit);
+        ecs_history::apply_commit(this->reg, this->monitors, *this->commits.back().commit);
         return new_base_id;
     }
 
