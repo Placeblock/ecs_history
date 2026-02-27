@@ -37,6 +37,8 @@ void serialize(Archive &archive, bounding_box_t &box) {
 }
 
 int main() {
+    spdlog::set_level(spdlog::level::info);
+
     std::unique_ptr<ecs_history::context::component_t> component = std::make_unique<
         ecs_history::default_component_t<bounding_box_t> >();
     ecs_history::context::register_component<bounding_box_t>(component);
@@ -44,7 +46,7 @@ int main() {
     int amount = 1000000;
 
     entt::registry reg;
-    auto entities = ecs_history::static_entities_t{reg};
+    auto entities = ecs_history::static_entities_t{};
     auto version_handler = ecs_history::entity_version_handler_t{};
     entt::storage_type_t<bounding_box_t> &storage = reg.storage<bounding_box_t>();
     std::unique_ptr<ecs_history::base_storage_monitor_t> monitor = std::make_unique<
@@ -56,7 +58,7 @@ int main() {
     auto history = std::make_unique<ecs_history::history_t>(reg, monitors);
 
     entt::registry reg2;
-    reg2.ctx().emplace<ecs_history::static_entities_t>(reg2);
+    reg2.ctx().emplace<ecs_history::static_entities_t>();
     reg2.ctx().emplace<ecs_history::entity_version_handler_t>();
 
     const spdlog::stopwatch create_entities_sw;
@@ -131,5 +133,39 @@ int main() {
     ecs_history::apply_commit(reg2, monitors, *deserialized_replace_commit);
     spdlog::info("Applying commit of 1.000.000 Entities with 1 component replaced each: {}",
                  duration_cast<milliseconds>(apply_replace_commit_sw.elapsed()));
+
+    const spdlog::stopwatch delete_components_sw;
+    for (uint32_t i = 0; i < amount; ++i) {
+        reg.remove<bounding_box_t>(entt::entity{i});
+    }
+    spdlog::info("Removing 1 component on 1.000.000 Entities: {}",
+                 duration_cast<milliseconds>(delete_components_sw.elapsed()));
+
+    const spdlog::stopwatch create_delete_commit_sw;
+    auto delete_commit = ecs_history::create_commit(monitors, version_handler);
+    spdlog::info("Creating commit of 1.000.000 Entities with 1 component removed each: {}",
+                 duration_cast<milliseconds>(create_delete_commit_sw.elapsed()));
+
+    const spdlog::stopwatch serialize_delete_commit_sw;
+    std::stringstream delete_oss{};
+    cereal::PortableBinaryOutputArchive delete_archive(delete_oss);
+    ecs_history::serialization::serialize_commit(delete_archive, *delete_commit);
+    auto delete_commit_string = delete_oss.str();
+    spdlog::info("Serializing commit of 1.000.000 Entities with 1 component removed each: {}",
+                 duration_cast<milliseconds>(serialize_delete_commit_sw.elapsed()));
+
+    const spdlog::stopwatch deserialize_delete_commit_sw;
+    std::istringstream delete_commit_is(delete_commit_string);
+    cereal::PortableBinaryInputArchive delete_commit_archive(delete_commit_is);
+    auto deserialized_delete_commit = ecs_history::serialization::deserialize_commit(
+        delete_commit_archive);
+    spdlog::info("Deserializing commit of 1.000.000 Entities with 1 component removed each: {}",
+                 duration_cast<milliseconds>(deserialize_delete_commit_sw.elapsed()));
+
+    const spdlog::stopwatch apply_delete_commit_sw;
+    ecs_history::apply_commit(reg2, monitors, *deserialized_delete_commit);
+    spdlog::info("Applying commit of 1.000.000 Entities with 1 component removed each: {}",
+                 duration_cast<milliseconds>(apply_delete_commit_sw.elapsed()));
+
     return 0;
 }
