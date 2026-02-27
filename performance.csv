@@ -1,12 +1,12 @@
 ,v1,v2,v3
-Creating 1.000.000 Entities,155,97,106
-Adding 1 Component to 1.000.000 Entities,33,53,56
-Creating commit of 1.000.000 Entities with 1 created component each,180,133,138
+Creating 1.000.000 Entities,155,97,99
+Adding 1 Component to 1.000.000 Entities,33,53,52
+Creating commit of 1.000.000 Entities with 1 created component each,180,133,127
 Serializing commit of 1.000.000 Entities with 1 component created each,353,128,89
-Deserializing commit of 1.000.000 Entities with 1 component created each,523,199,142
-Applying commit of 1.000.000 Entities with 1 component created each,196,155,110
-Replacing Components on 1.000.000 Entities,30,45,45
-Creating commit of 1.000.000 Entities with 1 component replaced each,170,130,130
-Serializing commit of 1.000.000 Entities with 1 component replaced each,344,129,89
-Deserializing commit of 1.000.000 Entities with 1 component replaced each,518,200,129
-Applying commit of 1.000.000 Entities with 1 component replaced each,73,65,26
+Deserializing commit of 1.000.000 Entities with 1 component created each,523,199,133
+Applying commit of 1.000.000 Entities with 1 component created each,196,155,102
+Replacing Components on 1.000.000 Entities,30,45,44
+Creating commit of 1.000.000 Entities with 1 component replaced each,170,130,128
+Serializing commit of 1.000.000 Entities with 1 component replaced each,344,129,87
+Deserializing commit of 1.000.000 Entities with 1 component replaced each,518,200,128
+Applying commit of 1.000.000 Entities with 1 component replaced each,73,65,21
