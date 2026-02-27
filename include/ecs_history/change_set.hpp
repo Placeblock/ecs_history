@@ -8,21 +8,25 @@
 #include <entt/entt.hpp>
 #include "change.hpp"
 
-
 namespace ecs_history {
+
 class base_change_set_t {
 public:
     entt::id_type id;
 
     explicit base_change_set_t(entt::id_type id);
 
-    virtual void supply(any_change_supplier_t &supplier) const = 0;
-
     virtual void for_entity(std::function<void(static_entity_t static_entity)> callback) const = 0;
 
     [[nodiscard]] virtual std::unique_ptr<base_change_set_t> invert() const = 0;
 
-    [[nodiscard]] virtual size_t size() const = 0;
+    virtual void apply(entt::registry &reg, static_entities_t &entities) const = 0;
+
+    virtual void serialize(cereal::PortableBinaryOutputArchive &archive) const = 0;
+
+    [[nodiscard]]
+
+    virtual size_t size() const = 0;
 
     [[nodiscard]] virtual size_t count() const = 0;
 
@@ -65,45 +69,8 @@ public:
         this->changes.emplace_back(std::move(change));
     }
 
-    void supply(change_supplier_t<T> &supplier) {
-        for (const auto &change : this->changes) {
-            change->apply(supplier);
-        }
-    }
-
-    class meta_change_supplier_t final : public change_supplier_t<T> {
-        any_change_supplier_t &any_supplier;
-
-    public:
-        explicit meta_change_supplier_t(any_change_supplier_t &any_supplier)
-            : any_supplier(any_supplier) {
-        }
-
-        void apply(const construct_change_t<T> &c) override {
-            entt::meta_any value{c.value};
-            any_supplier.apply_construct(c.static_entity, value);
-        }
-
-        void apply(const update_change_t<T> &c) override {
-            entt::meta_any old_value{c.old_value};
-            entt::meta_any new_value{c.new_value};
-            any_supplier.apply_update(c.static_entity, old_value, new_value);
-        }
-
-        void apply(const destruct_change_t<T> &c) override {
-            entt::meta_any old_value{c.old_value};
-            any_supplier.apply_destruct(c.static_entity, old_value);
-        }
-    };
-
-    void supply(any_change_supplier_t &any_supplier) const override {
-        meta_change_supplier_t meta_supplier{any_supplier};
-        for (const auto &change : this->changes) {
-            change->apply(meta_supplier);
-        }
-    }
-
-    void for_entity(std::function<void(static_entity_t static_entity)> callback) const override {
+    void for_entity(
+        const std::function<void(static_entity_t static_entity)> callback) const override {
         for (const auto &change : this->changes) {
             callback(change->static_entity);
         }
@@ -113,6 +80,19 @@ public:
         return this->changes.size();
     }
 
+    void apply(entt::registry &reg, static_entities_t &entities) const override {
+        change_applier_t<T> applier(reg.storage<T>(id), entities);
+        for (const auto &change : this->changes) {
+            change->apply(applier);
+        }
+    }
+
+    void serialize(cereal::PortableBinaryOutputArchive &archive) const override {
+        change_serializer_t<T> serializer{archive};
+        for (const auto &change : this->changes) {
+            change->apply(serializer);
+        }
+    }
 };
 }
 

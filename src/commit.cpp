@@ -4,8 +4,6 @@
 
 #include "ecs_history/commit.hpp"
 
-#include "ecs_history/change_applier.hpp"
-
 using namespace ecs_history;
 
 commit_id::commit_id(const uint64_t part1, const uint64_t part2) : part1{part1}, part2{part2} {
@@ -104,9 +102,8 @@ void ecs_history::apply_commit(entt::registry &reg,
         monitor->disable();
     }
 
-    any_change_applier_t applier{reg, static_entities};
     for (const auto &change_set : commit.change_sets) {
-        change_set->supply(applier);
+        change_set->apply(reg, static_entities);
     }
     for (const auto &[entity, version] : commit.entity_versions) {
         commit.undo

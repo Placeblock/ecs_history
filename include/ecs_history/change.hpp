@@ -6,7 +6,7 @@
 #define ECS_HISTORY_CHANGE_H
 
 #include "static_entity.hpp"
-#include "entt/meta/fwd.hpp"
+#include <cereal/archives/portable_binary.hpp>
 
 namespace ecs_history {
 template<typename T>
@@ -109,17 +109,71 @@ public:
     virtual ~change_supplier_t() = default;
 };
 
-class any_change_supplier_t {
+
+enum class change_type_t : uint8_t {
+    CONSTRUCT = 0,
+    UPDATE = 1,
+    UPDATE_ONLY_NEW = 2,
+    DESTRUCT = 3,
+    DESTRUCT_ONLY_NEW = 4
+};
+
+template<typename T>
+class change_applier_t final : public change_supplier_t<T> {
+    entt::storage<T> &storage;
+    static_entities_t &static_entities;
+
 public:
-    virtual void apply_construct(static_entity_t static_entity, entt::meta_any &value) = 0;
+    explicit change_applier_t(entt::storage<T> &storage,
+                              static_entities_t &static_entities) : storage(storage),
+        static_entities(static_entities) {
+    }
 
-    virtual void apply_update(static_entity_t static_entity,
-                              entt::meta_any &old_value,
-                              entt::meta_any &new_value) = 0;
+    void apply(const construct_change_t<T> &c) override {
+        const auto entt = this->static_entities.create_entity_or_inc_ref(c.static_entity);
+        this->storage.emplace(entt, c.value);
+    }
 
-    virtual void apply_destruct(static_entity_t static_entity, entt::meta_any &old_value) = 0;
+    void apply(const update_change_t<T> &c) override {
+        const auto entt = this->static_entities.get_entity(c.static_entity);
+        this->storage.patch(entt,
+                            [c](T &v) {
+                                v = c.new_value;
+                            });
+    }
 
-    virtual ~any_change_supplier_t() = default;
+    void apply(const destruct_change_t<T> &c) override {
+        const auto entt = this->static_entities.get_entity(c.static_entity);
+        this->storage.remove(entt);
+        this->static_entities.decrease_ref(c.static_entity);
+    }
+};
+
+template<typename T>
+class change_serializer_t final : public change_supplier_t<T> {
+    cereal::PortableBinaryOutputArchive &archive;
+
+public:
+    explicit change_serializer_t(cereal::PortableBinaryOutputArchive &archive)
+        : archive(archive) {
+    }
+
+    void apply(const construct_change_t<T> &c) override {
+        archive(c.static_entity);
+        archive(change_type_t::CONSTRUCT);
+        archive(c.value);
+    }
+
+    void apply(const update_change_t<T> &c) override {
+        archive(c.static_entity);
+        archive(change_type_t::UPDATE_ONLY_NEW);
+        archive(c.new_value);
+    }
+
+    void apply(const destruct_change_t<T> &c) override {
+        archive(c.static_entity);
+        archive(change_type_t::DESTRUCT_ONLY_NEW);
+    }
 };
 }
 

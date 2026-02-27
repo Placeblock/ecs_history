@@ -2,9 +2,9 @@
 // Created by felix on 1/30/26.
 //
 
-#include "ecs_history/serialization/component.hpp"
 #include "ecs_history/serialization/serialization.hpp"
 #include "ecs_history/history.hpp"
+#include "ecs_history/component/default_component.hpp"
 #include "ecs_history/entt/change_mixin.hpp"
 
 #include <spdlog/stopwatch.h>
@@ -31,33 +31,17 @@ struct entt::storage_type<bounding_box_t> {
     using type = change_storage_t<bounding_box_t>;
 };
 
-template<>
-struct fmt::formatter<bounding_box_t> : formatter<std::string> {
-    auto format(bounding_box_t box,
-                format_context &ctx) const -> decltype(ctx.out()) {
-        return format_to(ctx.out(), "[{}, {}]", box.pos_size.x, box.pos_size.y);
-    }
-};
-
-template<typename T>
-void emplace(entt::registry &registry, const entt::entity entt, const T &value) {
-    registry.emplace_or_replace<T>(entt, value);
-}
-
 template<typename Archive>
 void serialize(Archive &archive, bounding_box_t &box) {
     archive(box.pos_size.x, box.pos_size.y, box.pos_size.z, box.pos_size.w);
 }
 
 int main() {
-    int amount = 1000000;
+    std::unique_ptr<ecs_history::context::component_t> component = std::make_unique<
+        ecs_history::default_component_t<bounding_box_t> >();
+    ecs_history::context::register_component<bounding_box_t>(component);
 
-    entt::meta_factory<bounding_box_t>{}
-        .func<ecs_history::serialization::deserialize_change_set<
-            cereal::PortableBinaryInputArchive, bounding_box_t> >("deserialize_change_set"_hs)
-        .func<emplace<bounding_box_t> >("emplace"_hs)
-        .func<serialize<cereal::PortableBinaryOutputArchive> >("serialize"_hs)
-        .func<serialize<cereal::PortableBinaryInputArchive> >("deserialize"_hs);
+    int amount = 1000000;
 
     entt::registry reg;
     auto entities = ecs_history::static_entities_t{reg};
