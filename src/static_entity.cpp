@@ -44,8 +44,8 @@ entt::entity static_entities_t::decrease_ref(const static_entity_t static_entity
     ref_count--;
     if (ref_count == 0) {
         this->entity_storage.erase(entt);
-        this->entities.erase(static_entity);
         this->static_entities.erase(entt);
+        this->entities.erase(static_entity);
         spdlog::debug("destroying entity without components");
     }
     return entt;
