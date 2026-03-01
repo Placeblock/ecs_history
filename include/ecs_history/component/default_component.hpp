@@ -24,7 +24,7 @@ struct default_component_t final : context::component_t {
         return std::move(change_set);
     }
 
-    void serialize_raw(void *raw, cereal::PortableBinaryOutputArchive &archive) override {
+    void serialize_raw(const void *raw, cereal::PortableBinaryOutputArchive &archive) override {
         archive(*static_cast<T *>(raw));
     }
 

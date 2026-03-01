@@ -12,7 +12,7 @@ struct component_t {
     virtual std::unique_ptr<base_change_set_t> deserialize_change_set(
         cereal::PortableBinaryInputArchive &archive) = 0;
 
-    virtual void serialize_raw(void *raw, cereal::PortableBinaryOutputArchive &archive) = 0;
+    virtual void serialize_raw(const void *raw, cereal::PortableBinaryOutputArchive &archive) = 0;
 
     virtual ~component_t() = default;
 };
@@ -27,7 +27,7 @@ static std::unique_ptr<base_change_set_t> deserialize_change_set(const entt::id_
 }
 
 static void serialize_raw(const entt::id_type id,
-                          void *raw,
+                          const void *raw,
                           cereal::PortableBinaryOutputArchive &archive) {
     component_t &component = *components[id];
     component.serialize_raw(raw, archive);
