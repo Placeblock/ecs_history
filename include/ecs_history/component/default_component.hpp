@@ -10,7 +10,7 @@
 
 namespace ecs_history {
 template<typename T>
-struct default_component_t final : context::component_t {
+struct default_component_t final : registry::component_t {
     std::unique_ptr<base_change_set_t>
     deserialize_change_set(cereal::PortableBinaryInputArchive &archive) override {
         auto change_set = std::make_unique<change_set_t<T> >();

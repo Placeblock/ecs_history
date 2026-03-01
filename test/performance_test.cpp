@@ -39,9 +39,10 @@ void serialize(Archive &archive, bounding_box_t &box) {
 int main() {
     spdlog::set_level(spdlog::level::info);
 
-    std::unique_ptr<ecs_history::context::component_t> component = std::make_unique<
+    std::unique_ptr<ecs_history::registry::component_t> component = std::make_unique<
         ecs_history::default_component_t<bounding_box_t> >();
-    ecs_history::context::register_component<bounding_box_t>(component);
+    ecs_history::registry::component_registry_t registry;
+    registry.register_component<bounding_box_t>(component);
 
     int amount = 1000000;
 
@@ -92,7 +93,9 @@ int main() {
     const spdlog::stopwatch deserialize_commit_sw;
     std::istringstream commit_is(commit_string);
     cereal::PortableBinaryInputArchive commit_archive(commit_is);
-    auto deserialized_commit = ecs_history::serialization::deserialize_commit(commit_archive);
+    auto deserialized_commit = ecs_history::serialization::deserialize_commit(
+        commit_archive,
+        registry);
     spdlog::info("Deserializing commit of 1.000.000 Entities with 1 component created each: {}",
                  duration_cast<milliseconds>(deserialize_commit_sw.elapsed()));
 
@@ -125,7 +128,8 @@ int main() {
     std::istringstream replace_commit_is(replace_commit_string);
     cereal::PortableBinaryInputArchive replace_commit_archive(replace_commit_is);
     auto deserialized_replace_commit = ecs_history::serialization::deserialize_commit(
-        replace_commit_archive);
+        replace_commit_archive,
+        registry);
     spdlog::info("Deserializing commit of 1.000.000 Entities with 1 component replaced each: {}",
                  duration_cast<milliseconds>(deserialize_replace_commit_sw.elapsed()));
 
@@ -158,7 +162,8 @@ int main() {
     std::istringstream delete_commit_is(delete_commit_string);
     cereal::PortableBinaryInputArchive delete_commit_archive(delete_commit_is);
     auto deserialized_delete_commit = ecs_history::serialization::deserialize_commit(
-        delete_commit_archive);
+        delete_commit_archive,
+        registry);
     spdlog::info("Deserializing commit of 1.000.000 Entities with 1 component removed each: {}",
                  duration_cast<milliseconds>(deserialize_delete_commit_sw.elapsed()));
 

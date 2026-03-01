@@ -6,7 +6,7 @@
 #define ECS_HISTORY_COMPONENT_CONTEXT_HPP
 #include "ecs_history/change_set.hpp"
 
-namespace ecs_history::context {
+namespace ecs_history::registry {
 
 struct component_t {
     virtual std::unique_ptr<base_change_set_t> deserialize_change_set(
@@ -17,27 +17,36 @@ struct component_t {
     virtual ~component_t() = default;
 };
 
-inline std::unordered_map<entt::id_type, std::unique_ptr<component_t> > components{};
+class component_registry_t {
+    std::unordered_map<entt::id_type, std::unique_ptr<component_t> > components{};
 
-static std::unique_ptr<base_change_set_t> deserialize_change_set(const entt::id_type id,
-                                                                 cereal::PortableBinaryInputArchive
-                                                                 &archive) {
-    component_t &component = *components[id];
-    return component.deserialize_change_set(archive);
-}
+public:
+    std::unique_ptr<base_change_set_t> deserialize_change_set(const entt::id_type id,
+                                                              cereal::PortableBinaryInputArchive
+                                                              &archive) {
+        if (!components.contains(id)) {
+            throw std::runtime_error("Tried to deserialize unknown component change set");
+        }
+        component_t &component = *components[id];
+        return component.deserialize_change_set(archive);
+    }
 
-static void serialize_raw(const entt::id_type id,
-                          const void *raw,
-                          cereal::PortableBinaryOutputArchive &archive) {
-    component_t &component = *components[id];
-    component.serialize_raw(raw, archive);
-}
+    void serialize_raw(const entt::id_type id,
+                       const void *raw,
+                       cereal::PortableBinaryOutputArchive &archive) {
+        if (!components.contains(id)) {
+            throw std::runtime_error("Tried to serialize unknown component change set");
+        }
+        component_t &component = *components[id];
+        component.serialize_raw(raw, archive);
+    }
 
-template<typename T>
-void register_component(std::unique_ptr<component_t> &component) {
-    const entt::id_type id = entt::type_id<T>().hash();
-    components[id] = std::move(component);
-}
+    template<typename T>
+    void register_component(std::unique_ptr<component_t> &component) {
+        const entt::id_type id = entt::type_id<T>().hash();
+        components[id] = std::move(component);
+    }
+};
 
 }
 

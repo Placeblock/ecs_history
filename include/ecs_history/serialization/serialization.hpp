@@ -12,7 +12,9 @@
 namespace ecs_history::serialization {
 
 template<typename Archive>
-void deserialize_registry(Archive &archive, entt::registry &reg) {
+void deserialize_registry(Archive &archive,
+                          entt::registry &reg,
+                          registry::component_registry_t &component_registry) {
     auto &static_entities = reg.ctx().get<static_entities_t>();
     auto &version_handler = reg.ctx().get<entity_version_handler_t>();
     uint32_t entities;
@@ -30,15 +32,18 @@ void deserialize_registry(Archive &archive, entt::registry &reg) {
     for (int i = 0; i < storage_count; ++i) {
         entt::id_type id;
         archive(id);
-        const std::unique_ptr<base_change_set_t> change_set = context::deserialize_change_set(
-            id,
-            archive);
+        const std::unique_ptr<base_change_set_t> change_set = component_registry.
+            deserialize_change_set(
+                id,
+                archive);
         change_set->apply(reg, static_entities);
     }
 }
 
 template<typename Archive>
-void serialize_registry(Archive &archive, entt::registry &reg) {
+void serialize_registry(Archive &archive,
+                        entt::registry &reg,
+                        registry::component_registry_t &component_registry) {
     const auto &static_entities = reg.ctx().get<static_entities_t>();
     auto &version_handler = reg.ctx().get<entity_version_handler_t>();
 
@@ -59,7 +64,7 @@ void serialize_registry(Archive &archive, entt::registry &reg) {
             archive(static_entity);
             archive(change_type_t::CONSTRUCT);
             const void *raw_value = storage.value(entt);
-            context::serialize_raw(id, raw_value, archive);
+            component_registry.serialize_raw(id, raw_value, archive);
         }
     }
 }
@@ -102,22 +107,24 @@ constexpr entt::id_type deserialize_change_set_func = entt::hashed_string{"deser
 
 template<typename Archive>
 std::vector<std::unique_ptr<base_change_set_t> > deserialize_commit_changes(
-    Archive &archive) {
+    Archive &archive,
+    registry::component_registry_t &component_registry) {
     std::vector<std::unique_ptr<base_change_set_t> > change_sets;
     uint16_t change_set_count;
     archive(change_set_count);
     for (uint16_t i = 0; i < change_set_count; ++i) {
         entt::id_type id;
         archive(id);
-        change_sets.push_back(context::deserialize_change_set(id, archive));
+        change_sets.push_back(component_registry.deserialize_change_set(id, archive));
     }
     return change_sets;
 }
 
 template<typename Archive>
-std::unique_ptr<commit_t> deserialize_commit(Archive &archive) {
+std::unique_ptr<commit_t> deserialize_commit(Archive &archive,
+                                             registry::component_registry_t &component_registry) {
     auto entity_versions = serialization::deserialize_commit_entity_versions(archive);
-    auto changes = serialization::deserialize_commit_changes(archive);
+    auto changes = serialization::deserialize_commit_changes(archive, component_registry);
     return std::make_unique<commit_t>(
         std::move(entity_versions),
         std::move(changes));
