@@ -12,7 +12,6 @@
 #include <spdlog/fmt/compile.h>
 
 #include "ecs_history/change_set.hpp"
-#include "entity_version.hpp"
 #include "storage_monitor.hpp"
 
 namespace ecs_history {
@@ -67,16 +66,15 @@ struct commit_t {
 };
 
 std::unique_ptr<commit_t> create_commit(
-    std::vector<std::unique_ptr<base_storage_monitor_t> > &monitors,
-    entity_version_handler_t &version_handler);
+    const std::vector<std::unique_ptr<base_storage_monitor_t> > &monitors,
+    static_entities_t &static_entities);
 
 
 bool can_apply_commit(entt::registry &reg, const commit_t &commit);
 
 void apply_commit(entt::registry &reg,
                   const std::vector<std::unique_ptr<base_storage_monitor_t> > &monitors,
-                  const
-                  commit_t &commit);
+                  const commit_t &commit);
 }
 
 template<>

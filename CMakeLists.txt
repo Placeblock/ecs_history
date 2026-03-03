@@ -54,11 +54,9 @@ add_library(ecs_history ${ECS_HISTORY_LIBRARY_TYPE}
         include/ecs_history/entt/change_mixin.hpp
         include/ecs_history/storage_monitor.hpp
         include/ecs_history/static_entity.hpp
-        include/ecs_history/entity_version.hpp
         include/ecs_history/serialization/change.hpp
         include/ecs_history/serialization/serialization.hpp
         src/commit.cpp
-        src/entity_version.cpp
         src/change_set.cpp
         src/static_entity.cpp
         include/ecs_history/history.hpp
@@ -74,3 +72,8 @@ add_executable(test_performance test/performance_test.cpp)
 target_include_directories(test_performance BEFORE PRIVATE /usr/include)
 target_link_libraries(test_performance ecs_history)
 add_test(NAME test_performance COMMAND test_performance)
+
+add_executable(test_history test/history_test.cpp)
+target_include_directories(test_history BEFORE PRIVATE /usr/include)
+target_link_libraries(test_history ecs_history)
+add_test(NAME test_history COMMAND test_history)

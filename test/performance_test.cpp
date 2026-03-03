@@ -48,7 +48,6 @@ int main() {
 
     entt::registry reg;
     auto entities = ecs_history::static_entities_t{};
-    auto version_handler = ecs_history::entity_version_handler_t{};
     entt::storage_type_t<bounding_box_t> &storage = reg.storage<bounding_box_t>();
     std::unique_ptr<ecs_history::base_storage_monitor_t> monitor = std::make_unique<
         ecs_history::storage_monitor_t<bounding_box_t> >(
@@ -56,16 +55,13 @@ int main() {
         storage);
     std::vector<std::unique_ptr<ecs_history::base_storage_monitor_t> > monitors;
     monitors.push_back(std::move(monitor));
-    auto history = std::make_unique<ecs_history::history_t>(reg, monitors);
 
     entt::registry reg2;
     reg2.ctx().emplace<ecs_history::static_entities_t>();
-    reg2.ctx().emplace<ecs_history::entity_version_handler_t>();
 
     const spdlog::stopwatch create_entities_sw;
     for (int i = 0; i < amount; ++i) {
-        ecs_history::static_entity_t static_entity = entities.create();
-        version_handler.add_entity(static_entity, 0);
+        entities.create();
     }
     spdlog::info("Creating 1.000.000 Entities: {}",
                  duration_cast<milliseconds>(create_entities_sw.elapsed()));
@@ -78,7 +74,7 @@ int main() {
                  duration_cast<milliseconds>(emplace_components_sw.elapsed()));
 
     const spdlog::stopwatch create_commit_sw;
-    auto commit = ecs_history::create_commit(monitors, version_handler);
+    auto commit = ecs_history::create_commit(monitors, entities);
     spdlog::info("Creating commit of 1.000.000 Entities with 1 created component each: {}",
                  duration_cast<milliseconds>(create_commit_sw.elapsed()));
 
@@ -112,7 +108,7 @@ int main() {
                  duration_cast<milliseconds>(replace_components_sw.elapsed()));
 
     const spdlog::stopwatch create_replace_commit_sw;
-    auto replace_commit = ecs_history::create_commit(monitors, version_handler);
+    auto replace_commit = ecs_history::create_commit(monitors, entities);
     spdlog::info("Creating commit of 1.000.000 Entities with 1 component replaced each: {}",
                  duration_cast<milliseconds>(create_replace_commit_sw.elapsed()));
 
@@ -140,13 +136,13 @@ int main() {
 
     const spdlog::stopwatch delete_components_sw;
     for (uint32_t i = 0; i < amount; ++i) {
-        reg.remove<bounding_box_t>(entt::entity{i});
+        storage.remove(entt::entity{i});
     }
     spdlog::info("Removing 1 component on 1.000.000 Entities: {}",
                  duration_cast<milliseconds>(delete_components_sw.elapsed()));
 
     const spdlog::stopwatch create_delete_commit_sw;
-    auto delete_commit = ecs_history::create_commit(monitors, version_handler);
+    auto delete_commit = ecs_history::create_commit(monitors, entities);
     spdlog::info("Creating commit of 1.000.000 Entities with 1 component removed each: {}",
                  duration_cast<milliseconds>(create_delete_commit_sw.elapsed()));
 

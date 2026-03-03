@@ -2,6 +2,8 @@
 // Created by felix on 12/24/25.
 //
 
+#include <utility>
+
 #include "ecs_history/commit.hpp"
 
 using namespace ecs_history;
@@ -61,8 +63,8 @@ size_t commit_t::size() const {
 }
 
 std::unique_ptr<commit_t> ecs_history::create_commit(
-    std::vector<std::unique_ptr<base_storage_monitor_t> > &monitors,
-    entity_version_handler_t &version_handler) {
+    const std::vector<std::unique_ptr<base_storage_monitor_t> > &monitors,
+    static_entities_t &static_entities) {
     auto commit = std::make_unique<commit_t>();
     for (const auto &monitor : monitors) {
         commit->change_sets.push_back(monitor->commit());
@@ -76,18 +78,21 @@ std::unique_ptr<commit_t> ecs_history::create_commit(
             });
     }
     for (const static_entity_t &static_entity : commit_entities) {
-        commit->entity_versions[static_entity] = version_handler.increment_version(
-            static_entity);
+        if (static_entities.has_entity(static_entity)) {
+            commit->entity_versions[static_entity] = static_entities.increment_version(
+                static_entity);
+        }
     }
 
     return std::move(commit);
 }
 
 bool ecs_history::can_apply_commit(entt::registry &reg, const commit_t &commit) {
-    auto version_handler = reg.ctx().get<entity_version_handler_t>();
+    const auto &static_entities = reg.ctx().get<static_entities_t>();
     return std::ranges::all_of(commit.entity_versions,
                                [&](const auto &pair) {
-                                   return pair.second == version_handler.get_version(
+                                   return !static_entities.has_entity(pair.first) || pair.second ==
+                                          static_entities.get_version(
                                               pair.first);
                                });
 }
@@ -96,19 +101,22 @@ void ecs_history::apply_commit(entt::registry &reg,
                                const std::vector<std::unique_ptr<base_storage_monitor_t> > &
                                monitors,
                                const commit_t &commit) {
-    auto &version_handler = reg.ctx().get<entity_version_handler_t>();
     auto &static_entities = reg.ctx().get<static_entities_t>();
     for (auto &monitor : monitors) {
         monitor->disable();
     }
 
+    for (const auto &[entity, version] : commit.entity_versions) {
+        if (static_entities.has_entity(entity)) {
+            commit.undo
+                ? static_entities.set_version(entity, version - 1)
+                : static_entities.set_version(entity, version + 1);
+        } else {
+            static_entities.create(entity, version);
+        }
+    }
     for (const auto &change_set : commit.change_sets) {
         change_set->apply(reg, static_entities);
-    }
-    for (const auto &[entity, version] : commit.entity_versions) {
-        commit.undo
-            ? version_handler.set_version(entity, version - 1)
-            : version_handler.set_version(entity, version + 1);
     }
 
     for (auto &monitor : monitors) {

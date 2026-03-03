@@ -16,7 +16,6 @@ void deserialize_registry(Archive &archive,
                           entt::registry &reg,
                           registry::component_registry_t &component_registry) {
     auto &static_entities = reg.ctx().get<static_entities_t>();
-    auto &version_handler = reg.ctx().get<entity_version_handler_t>();
     uint32_t entities;
     archive(entities);
     for (int i = 0; i < entities; ++i) {
@@ -24,7 +23,7 @@ void deserialize_registry(Archive &archive,
         archive(static_entity);
         entity_version_t version;
         archive(version);
-        version_handler.add_entity(static_entity, version);
+        static_entities.create(static_entity, version);
     }
 
     uint16_t storage_count;
@@ -45,10 +44,9 @@ void serialize_registry(Archive &archive,
                         entt::registry &reg,
                         registry::component_registry_t &component_registry) {
     const auto &static_entities = reg.ctx().get<static_entities_t>();
-    auto &version_handler = reg.ctx().get<entity_version_handler_t>();
 
-    archive(static_cast<uint32_t>(version_handler.versions.size()));
-    for (const auto &[static_entity, version] : version_handler.versions) {
+    archive(static_cast<uint32_t>(static_entities.get_versions().size()));
+    for (const auto &[static_entity, version] : static_entities.get_versions()) {
         archive(static_entity);
         archive(version);
     }

@@ -130,7 +130,7 @@ public:
     }
 
     void apply(const construct_change_t<T> &c) override {
-        const auto entt = this->static_entities.create_entity_or_inc_ref(c.static_entity);
+        const auto entt = this->static_entities.increase_ref(c.static_entity);
         this->storage.emplace(entt, c.value);
     }
 

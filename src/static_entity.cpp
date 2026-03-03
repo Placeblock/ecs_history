@@ -9,42 +9,48 @@
 
 using namespace ecs_history;
 
+entt::entity static_entities_t::create() {
+    const auto entity = this->entity_storage.generate();
+    static_entity_t static_entity = this->next++;
+    this->static_entities.emplace(entity, static_entity);
+    this->entities[static_entity] = {entity, 0};
+    this->versions.emplace(static_entity, 0);
+    spdlog::debug("created new entity");
+    return entity;
+}
+
+void static_entities_t::create(static_entity_t static_entity, entity_version_t version) {
+    const auto entity = this->entity_storage.generate();
+    this->entities[static_entity] = {entity, 0};
+    this->static_entities.emplace(entity, static_entity);
+    this->versions.emplace(static_entity, version);
+}
+
+bool static_entities_t::has_entity(const static_entity_t static_entity) const {
+    return this->entities.contains(static_entity);
+}
+
 static_entity_t static_entities_t::increase_ref(const entt::entity entity) {
     const static_entity_t static_entity = this->static_entities.get(entity).id;
-    this->entities.get(static_entity).ref_count++;
+    this->entities.at(static_entity).ref_count++;
     spdlog::debug("increasing reference count of entity");
     return static_entity;
 }
 
-entt::entity static_entities_t::create_entity_or_inc_ref(const static_entity_t static_entity) {
-    if (this->entities.contains(static_entity)) {
-        auto &[entt, ref_count] = this->entities.get(static_entity);
-        ref_count++;
-        spdlog::debug("increasing reference count of entity");
-        return entt;
-    }
-    const auto entity = this->entity_storage.generate();
-    this->static_entities.emplace(entity, static_entity);
-    this->entities.emplace(static_entity, entity, static_cast<uint16_t>(1));
-    spdlog::debug("creating new entity and increased reference count");
-    return entity;
-}
-
-static_entity_t static_entities_t::create() {
-    static_entity_t static_entity = this->next++;
-    entt::entity entity = this->entity_storage.generate();
-    this->static_entities.emplace(entity, static_entity);
-    this->entities.emplace(static_entity, entity, static_cast<uint16_t>(0));
-    spdlog::debug("creating new entity");
-    return static_entity;
+entt::entity static_entities_t::increase_ref(const static_entity_t static_entity) {
+    auto &[entt, ref_count] = this->entities.at(static_entity);
+    ref_count++;
+    spdlog::debug("increasing reference count of entity");
+    return entt;
 }
 
 entt::entity static_entities_t::decrease_ref(const static_entity_t static_entity) {
-    auto &[entt, ref_count] = this->entities.get(static_entity);
+    auto &[entt, ref_count] = this->entities.at(static_entity);
     ref_count--;
     if (ref_count == 0) {
         this->entity_storage.erase(entt);
         this->static_entities.erase(entt);
+        this->versions.erase(static_entity);
         this->entities.erase(static_entity);
         spdlog::debug("destroying entity without components");
     }
@@ -62,5 +68,23 @@ entt::entity static_entities_t::get_entity(const static_entity_t static_entity) 
     if (!this->entities.contains(static_entity)) {
         throw std::runtime_error("static entity does not exist");
     }
-    return this->entities.get(static_entity).entt;
+    return this->entities.at(static_entity).entt;
+}
+
+entity_version_t static_entities_t::get_version(
+    const static_entity_t entity) const {
+    return this->versions.at(entity);
+}
+
+void static_entities_t::set_version(const static_entity_t entity,
+                                    const entity_version_t version) {
+    this->versions[entity] = version;
+}
+
+entity_version_t static_entities_t::increment_version(
+    const static_entity_t entity) {
+    if (!this->versions.contains(entity)) {
+        throw std::runtime_error("entity does not exist in version handler");
+    }
+    return this->versions.at(entity)++;
 }
