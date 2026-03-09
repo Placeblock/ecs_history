@@ -1,3 +1,5 @@
+[[Disclaimer]]: This project moved to codeberg: https://codeberg.org/Placeblock/ecs-history
+
 # Ecs History - History for EnTT
 
 This is a small library I developed to track changes in an EnTT Registry.
